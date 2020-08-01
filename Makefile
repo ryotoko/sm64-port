@@ -21,6 +21,8 @@ NON_MATCHING ?= 0
 TARGET_N64 ?= 0
 # Build for Emscripten/WebGL
 TARGET_WEB ?= 0
+# Build for the Wii U
+TARGET_WII_U ?= 1
 # Compiler to use (ido or gcc)
 COMPILER ?= ido
 
@@ -31,11 +33,13 @@ ifeq ($(TARGET_N64),0)
   GRUCODE := f3dex2e
   TARGET_WINDOWS := 0
   ifeq ($(TARGET_WEB),0)
-    ifeq ($(OS),Windows_NT)
-      TARGET_WINDOWS := 1
-    else
-      # TODO: Detect Mac OS X, BSD, etc. For now, assume Linux
-      TARGET_LINUX := 1
+    ifeq ($(TARGET_WII_U),0)
+      ifeq ($(OS),Windows_NT)
+        TARGET_WINDOWS := 1
+      else
+        # TODO: Detect Mac OS X, BSD, etc. For now, assume Linux
+        TARGET_LINUX := 1
+      endif
     endif
   endif
 
@@ -47,8 +51,10 @@ ifeq ($(TARGET_N64),0)
       endif
     endif
   else
-    # On others, default to OpenGL
-    ENABLE_OPENGL ?= 1
+    ifeq ($(TARGET_WII_U),0)
+      # On others, default to OpenGL
+      ENABLE_OPENGL ?= 1
+    endif
   endif
 
   # Sanity checks
@@ -73,6 +79,33 @@ ifeq ($(TARGET_N64),0)
     ifeq ($(ENABLE_DX11),1)
       $(error Cannot specify multiple graphics backends)
     endif
+  endif
+
+  # Set up WUT for Wii U
+  ifeq ($(TARGET_WII_U),1)
+    ifeq ($(strip $(DEVKITPRO)),)
+    $(error "Please set DEVKITPRO in your environment. export DEVKITPRO=<path to>/devkitpro")
+    endif
+
+    ifeq ($(strip $(DEVKITPPC)),)
+    $(error "Please set DEVKITPPC in your environment. export DEVKITPPC=<path to>/devkitPro/devkitPPC")
+    endif
+
+    include $(DEVKITPPC)/base_tools
+
+    PORTLIBS	:=	$(PORTLIBS_PATH)/wiiu $(PORTLIBS_PATH)/ppc
+
+    export PATH := $(PORTLIBS_PATH)/wiiu/bin:$(PORTLIBS_PATH)/ppc/bin:$(PATH)
+
+    WUT_ROOT	?=	$(DEVKITPRO)/wut
+
+    RPXSPECS	:=	-specs=$(WUT_ROOT)/share/wut.specs
+
+    MACHDEP	= -DESPRESSO -mcpu=750 -meabi -mhard-float
+
+    LIBDIRS	    := $(PORTLIBS) $(WUT_ROOT)
+    INCLUDE	    := $(foreach dir,$(LIBDIRS),-I$(dir)/include)
+    LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
   endif
 
 endif
@@ -100,7 +133,7 @@ ifeq ($(VERSION),sh)
   VERSION_DEF := VERSION_SH
   GRUCODE_DEF := F3D_NEW
 # TODO: GET RID OF THIS!!! We should mandate assets for Shindou like EU but we dont have the addresses extracted yet so we'll just pretend you have everything extracted for now.
-  NOEXTRACT := 1 
+  NOEXTRACT := 1
 else
   $(error unknown version "$(VERSION)")
 endif
@@ -194,7 +227,11 @@ else
 ifeq ($(TARGET_WEB),1)
   BUILD_DIR := $(BUILD_DIR_BASE)/$(VERSION)_web
 else
+ifeq ($(TARGET_WII_U),1)
+  BUILD_DIR := $(BUILD_DIR_BASE)/$(VERSION)_wiiu
+else
   BUILD_DIR := $(BUILD_DIR_BASE)/$(VERSION)_pc
+endif
 endif
 endif
 
@@ -205,7 +242,11 @@ else
 ifeq ($(TARGET_WINDOWS),1)
 EXE := $(BUILD_DIR)/$(TARGET).exe
 else
+ifeq ($(TARGET_WII_U),1)
+EXE := $(BUILD_DIR)/$(TARGET).elf
+else
 EXE := $(BUILD_DIR)/$(TARGET)
+endif
 endif
 endif
 ROM := $(BUILD_DIR)/$(TARGET).z64
@@ -423,6 +464,11 @@ export LANG := C
 
 else # TARGET_N64
 
+ifeq ($(TARGET_WII_U),1)
+LD := $(CXX)
+CPP := powerpc-eabi-cpp -P
+OBJDUMP := powerpc-eabi-objdump
+else
 AS := as
 ifneq ($(TARGET_WEB),1)
   CC := gcc
@@ -438,6 +484,7 @@ endif
 CPP := cpp -P
 OBJDUMP := objdump
 OBJCOPY := objcopy
+endif
 PYTHON := python3
 
 # Platform-specific compiler and linker flags
@@ -448,6 +495,10 @@ endif
 ifeq ($(TARGET_LINUX),1)
   PLATFORM_CFLAGS  := -DTARGET_LINUX `pkg-config --cflags libusb-1.0`
   PLATFORM_LDFLAGS := -lm -lpthread `pkg-config --libs libusb-1.0` -lasound -lpulse -no-pie
+endif
+ifeq ($(TARGET_WII_U),1)
+  PLATFORM_CFLAGS  := -DTARGET_WII_U -ffunction-sections $(MACHDEP) -D__WIIU__ -D__WUT__ $(INCLUDE)
+  PLATFORM_LDFLAGS := -lm -no-pie -g $(MACHDEP) $(RPXSPECS) $(LIBPATHS)
 endif
 ifeq ($(TARGET_WEB),1)
   PLATFORM_CFLAGS  := -DTARGET_WEB
@@ -481,11 +532,19 @@ ifeq ($(ENABLE_DX12),1)
   GFX_CFLAGS := -DENABLE_DX12
   PLATFORM_LDFLAGS += -lgdi32 -static
 endif
+ifeq ($(TARGET_WII_U),1)
+  GFX_CFLAGS :=
+  PLATFORM_LDFLAGS += -lSDL2 -lwut
+endif
 
 GFX_CFLAGS += -DWIDESCREEN
 
 CC_CHECK := $(CC) -fsyntax-only -fsigned-char $(INCLUDE_CFLAGS) -Wall -Wextra -Wno-format-security -D_LANGUAGE_C $(VERSION_CFLAGS) $(MATCH_CFLAGS) $(PLATFORM_CFLAGS) $(GFX_CFLAGS) $(GRUCODE_CFLAGS)
-CFLAGS := $(OPT_FLAGS) $(INCLUDE_CFLAGS) -D_LANGUAGE_C $(VERSION_CFLAGS) $(MATCH_CFLAGS) $(PLATFORM_CFLAGS) $(GFX_CFLAGS) $(GRUCODE_CFLAGS) -fno-strict-aliasing -fwrapv -march=native
+CFLAGS := $(OPT_FLAGS) $(INCLUDE_CFLAGS) -D_LANGUAGE_C $(VERSION_CFLAGS) $(MATCH_CFLAGS) $(PLATFORM_CFLAGS) $(GFX_CFLAGS) $(GRUCODE_CFLAGS) -fno-strict-aliasing -fwrapv
+
+ifeq ($(TARGET_WII_U),0)
+  CFLAGS += -march=native
+endif
 
 ASFLAGS := -I include -I $(BUILD_DIR) $(VERSION_ASFLAGS)
 
@@ -818,6 +877,7 @@ $(BUILD_DIR)/$(TARGET).objdump: $(ELF)
 else
 $(EXE): $(O_FILES) $(MIO0_FILES:.mio0=.o) $(SOUND_OBJ_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES)
 	$(LD) -L $(BUILD_DIR) -o $@ $(O_FILES) $(SOUND_OBJ_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(LDFLAGS)
+
 endif
 
 

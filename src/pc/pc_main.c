@@ -5,6 +5,16 @@
 #include <emscripten/html5.h>
 #endif
 
+#ifdef TARGET_WII_U
+#include <SDL2/SDL.h>
+
+#include <whb/log_cafe.h>
+#include <whb/log_udp.h>
+#include <whb/log.h>
+#include <whb/proc.h>
+#include <whb/crash.h>
+#endif
+
 #include "sm64.h"
 
 #include "game/memory.h"
@@ -15,6 +25,7 @@
 #include "gfx/gfx_direct3d11.h"
 #include "gfx/gfx_direct3d12.h"
 #include "gfx/gfx_dxgi.h"
+#include "gfx/gfx_whb.h"
 #include "gfx/gfx_glx.h"
 #include "gfx/gfx_sdl.h"
 
@@ -80,7 +91,7 @@ void send_display_list(struct SPTask *spTask) {
 void produce_one_frame(void) {
     gfx_start_frame();
     game_loop_one_iteration();
-    
+
     int samples_left = audio_api->buffered();
     u32 num_audio_samples = samples_left < audio_api->get_desired_buffered() ? SAMPLES_HIGH : SAMPLES_LOW;
     //printf("Audio samples: %d %u\n", samples_left, num_audio_samples);
@@ -94,7 +105,7 @@ void produce_one_frame(void) {
     }
     //printf("Audio samples before submitting: %d\n", audio_api->buffered());
     audio_api->play((u8 *)audio_buffer, 2 * num_audio_samples * 4);
-    
+
     gfx_end_frame();
 }
 
@@ -140,10 +151,32 @@ static void on_fullscreen_changed(bool is_now_fullscreen) {
 }
 
 void main_func(void) {
+#ifdef TARGET_WII_U
+    WHBLogCafeInit();
+    WHBLogUdpInit();
+    WHBLogPrint("Logging initialized.");
+    WHBInitCrashHandler();
+    WHBLogPrint("Exception handler initialized.");
+#endif
     static u64 pool[0x165000/8 / 4 * sizeof(void *)];
     main_pool_init(pool, pool + sizeof(pool) / sizeof(pool[0]));
     gEffectsMemoryPool = mem_pool_init(0x4000, MEMORY_POOL_LEFT);
 
+#ifdef TARGET_WII_U
+    WHBLogPrint("Main pool initialized.");
+
+    rendering_api = &gfx_whb_api;
+    wm_api = &gfx_sdl;
+    configFullscreen = true;
+
+    gfx_init(wm_api, rendering_api, "Super Mario 64 PC-Port", true);
+
+    WHBLogPrint("Gfx initialized.");
+
+    wm_api->set_fullscreen_changed_callback(NULL);
+    wm_api->set_keyboard_callbacks(NULL, NULL, NULL);
+
+#else
     configfile_load(CONFIG_FILE);
     atexit(save_config);
 
@@ -168,10 +201,12 @@ void main_func(void) {
 #endif
 
     gfx_init(wm_api, rendering_api, "Super Mario 64 PC-Port", configFullscreen);
-    
+
     wm_api->set_fullscreen_changed_callback(on_fullscreen_changed);
     wm_api->set_keyboard_callbacks(keyboard_on_key_down, keyboard_on_key_up, keyboard_on_all_keys_up);
-    
+
+#endif
+
 #if HAVE_WASAPI
     if (audio_api == NULL && audio_wasapi.init()) {
         audio_api = &audio_wasapi;
@@ -187,7 +222,7 @@ void main_func(void) {
         audio_api = &audio_alsa;
     }
 #endif
-#ifdef TARGET_WEB
+#if defined(TARGET_WEB) || defined(TARGET_WII_U)
     if (audio_api == NULL && audio_sdl.init()) {
         audio_api = &audio_sdl;
     }
@@ -196,8 +231,19 @@ void main_func(void) {
         audio_api = &audio_null;
     }
 
+#ifdef TARGET_WII_U
+    if (audio_api == &audio_sdl)
+    {
+        WHBLogPrint("SDL audio initialized.");
+    }
+#endif
+
     audio_init();
     sound_init();
+
+#ifdef TARGET_WII_U
+    WHBLogPrint("Audio and sound initialized.");
+#endif
 
     thread5_game_loop(NULL);
 #ifdef TARGET_WEB
@@ -207,9 +253,21 @@ void main_func(void) {
     inited = 1;
 #else
     inited = 1;
+#ifdef TARGET_WII_U
+    while (WHBProcIsRunning()) {
+#else
     while (1) {
+#endif
         wm_api->main_loop(produce_one_frame);
     }
+#ifdef TARGET_WII_U
+    WHBLogPrint("Quitting.");
+
+    SDL_Quit();
+
+    WHBLogCafeDeinit();
+    WHBLogUdpDeinit();
+#endif
 #endif
 }
 

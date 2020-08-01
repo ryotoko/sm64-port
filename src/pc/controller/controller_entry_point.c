@@ -26,7 +26,9 @@ static struct ControllerAPI *controller_implementations[] = {
 #ifdef __linux__
     &controller_wup,
 #endif
+#ifndef __WIIU__
     &controller_keyboard,
+#endif
 };
 
 s32 osContInit(UNUSED OSMesgQueue *mq, u8 *controllerBits, UNUSED OSContStatus *status) {
