@@ -1,6 +1,7 @@
 #ifdef TARGET_WII_U
 
 #include <SDL2/SDL.h>
+#include <gx2/event.h>
 
 #include "gfx_window_manager_api.h"
 #include "gfx_screen_config.h"
@@ -68,7 +69,14 @@ static void gfx_sdl_set_keyboard_callbacks(bool (*on_key_down)(int scancode), bo
 }
 
 static void gfx_sdl_main_loop(void (*run_one_game_iter)(void)) {
+    // Ensure we run at 30FPS
+    // Fool-proof unless the Wii U is able to
+    // execute `run_one_game_iter()` so fast
+    // that it doesn't even stall for enough time for
+    // the second `GX2WaitForVsync()` to register
+    GX2WaitForVsync();
     run_one_game_iter();
+    GX2WaitForVsync();
 }
 
 static void gfx_sdl_get_dimensions(uint32_t *width, uint32_t *height) {
@@ -96,19 +104,7 @@ static bool gfx_sdl_start_frame(void) {
     return true;
 }
 
-static void sync_framerate_with_timer(void) {
-    // Number of milliseconds a frame should take (30 fps)
-    const Uint32 FRAME_TIME = 1000 / 30;
-    static Uint32 last_time;
-    Uint32 elapsed = SDL_GetTicks() - last_time;
-
-    if (elapsed < FRAME_TIME)
-        SDL_Delay(FRAME_TIME - elapsed);
-    last_time += FRAME_TIME;
-}
-
 static void gfx_sdl_swap_buffers_begin(void) {
-    sync_framerate_with_timer();
 }
 
 static void gfx_sdl_swap_buffers_end(void) {
