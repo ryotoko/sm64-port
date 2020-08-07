@@ -2,6 +2,7 @@
 
 #include <SDL2/SDL.h>
 #include <gx2/event.h>
+#include <whb/gfx.h>
 
 #include "gfx_window_manager_api.h"
 #include "gfx_screen_config.h"
@@ -105,6 +106,7 @@ static bool gfx_sdl_start_frame(void) {
 }
 
 static void gfx_sdl_swap_buffers_begin(void) {
+    WHBGfxFinishRender();
 }
 
 static void gfx_sdl_swap_buffers_end(void) {

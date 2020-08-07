@@ -158,6 +158,7 @@ void main_func(void) {
     WHBInitCrashHandler();
     WHBLogPrint("Exception handler initialized.");
 #endif
+
     static u64 pool[0x165000/8 / 4 * sizeof(void *)];
     main_pool_init(pool, pool + sizeof(pool) / sizeof(pool[0]));
     gEffectsMemoryPool = mem_pool_init(0x4000, MEMORY_POOL_LEFT);
