@@ -1,8 +1,10 @@
 #ifdef TARGET_WII_U
 
 #include <SDL2/SDL.h>
+#include <gx2/display.h>
 #include <gx2/event.h>
 #include <whb/gfx.h>
+#include <whb/log.h>
 
 #include "gfx_window_manager_api.h"
 #include "gfx_screen_config.h"
@@ -10,13 +12,33 @@
 #define GFX_API_NAME "SDL2 - WHB"
 
 static SDL_Window *wnd;
-static unsigned int window_width = DESIRED_SCREEN_WIDTH;
-static unsigned int window_height = DESIRED_SCREEN_HEIGHT;
-static bool fullscreen_state;
+static unsigned int window_width;
+static unsigned int window_height;
+static bool fullscreen_state = false;
 static void (*on_fullscreen_changed_callback)(bool is_now_fullscreen);
 static bool (*on_key_down_callback)(int scancode);
 static bool (*on_key_up_callback)(int scancode);
 static void (*on_all_keys_up_callback)(void);
+
+static void gfx_sdl_get_dimensions(uint32_t *width, uint32_t *height) {
+    switch (GX2GetSystemTVScanMode()) {
+        case GX2_TV_SCAN_MODE_480I:
+        case GX2_TV_SCAN_MODE_480P:
+            *width = 854;
+            *height = 480;
+            break;
+        case GX2_TV_SCAN_MODE_1080I:
+        case GX2_TV_SCAN_MODE_1080P:
+            *width = 1920;
+            *height = 1080;
+            break;
+        case GX2_TV_SCAN_MODE_720P:
+        default:
+            *width = 1280;
+            *height = 720;
+            break;
+    }
+}
 
 static void set_fullscreen(bool on, bool call_callback) {
     if (fullscreen_state == on) {
@@ -24,17 +46,10 @@ static void set_fullscreen(bool on, bool call_callback) {
     }
     fullscreen_state = on;
 
-    if (on) {
-        SDL_DisplayMode mode;
-        SDL_GetDesktopDisplayMode(0, &mode);
-        window_width = mode.w;
-        window_height = mode.h;
-    } else {
-        window_width = DESIRED_SCREEN_WIDTH;
-        window_height = DESIRED_SCREEN_HEIGHT;
-    }
+    gfx_sdl_get_dimensions(&window_width, &window_height);
+
     SDL_SetWindowSize(wnd, window_width, window_height);
-    SDL_SetWindowFullscreen(wnd, on ? SDL_WINDOW_FULLSCREEN : 0);
+    SDL_SetWindowFullscreen(wnd, SDL_WINDOW_FULLSCREEN);
 
     if (on_fullscreen_changed_callback != NULL && call_callback) {
         on_fullscreen_changed_callback(on);
@@ -78,11 +93,6 @@ static void gfx_sdl_main_loop(void (*run_one_game_iter)(void)) {
     GX2WaitForVsync();
     run_one_game_iter();
     GX2WaitForVsync();
-}
-
-static void gfx_sdl_get_dimensions(uint32_t *width, uint32_t *height) {
-    *width = window_width;
-    *height = window_height;
 }
 
 static void gfx_sdl_onkeydown(int scancode) {
