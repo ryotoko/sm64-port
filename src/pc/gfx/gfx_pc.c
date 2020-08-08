@@ -907,7 +907,7 @@ static void gfx_sp_tri1(uint8_t vtx1_idx, uint8_t vtx2_idx, uint8_t vtx3_idx) {
                     buf_vbo[buf_vbo_len++] = color->r / 255.0f;
                     buf_vbo[buf_vbo_len++] = color->g / 255.0f;
                     buf_vbo[buf_vbo_len++] = color->b / 255.0f;
-#ifdef TARGET_WII_U
+#if (defined(TARGET_WII_U) || defined(ENABLE_OPENGL))
                     if (!use_alpha) {
                         buf_vbo[buf_vbo_len++] = 1.0f;
                     }

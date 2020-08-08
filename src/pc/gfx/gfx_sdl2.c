@@ -10,9 +10,9 @@
 
 #if FOR_WINDOWS
 #include <GL/glew.h>
-#include "SDL.h"
+#include <SDL2/SDL.h>
 #define GL_GLEXT_PROTOTYPES 1
-#include "SDL_opengl.h"
+#include <SDL2/SDL_opengl.h>
 #else
 #include <SDL2/SDL.h>
 #define GL_GLEXT_PROTOTYPES 1
@@ -36,7 +36,7 @@ static bool (*on_key_up_callback)(int scancode);
 static void (*on_all_keys_up_callback)(void);
 
 const SDL_Scancode windows_scancode_table[] =
-{ 
+{
     /*	0						1							2							3							4						5							6							7 */
     /*	8						9							A							B							C						D							E							F */
     SDL_SCANCODE_UNKNOWN,		SDL_SCANCODE_ESCAPE,		SDL_SCANCODE_1,				SDL_SCANCODE_2,				SDL_SCANCODE_3,			SDL_SCANCODE_4,				SDL_SCANCODE_5,				SDL_SCANCODE_6,			/* 0 */
