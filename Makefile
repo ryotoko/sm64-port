@@ -243,7 +243,7 @@ ifeq ($(TARGET_WINDOWS),1)
 EXE := $(BUILD_DIR)/$(TARGET).exe
 else
 ifeq ($(TARGET_WII_U),1)
-EXE := $(BUILD_DIR)/$(TARGET).elf
+EXE := $(BUILD_DIR)/$(TARGET).rpx
 else
 EXE := $(BUILD_DIR)/$(TARGET)
 endif
@@ -877,8 +877,19 @@ $(BUILD_DIR)/$(TARGET).objdump: $(ELF)
 	$(OBJDUMP) -D $< > $@
 
 else
+ifeq ($(TARGET_WII_U),1)
+$(ELF): $(O_FILES) $(MIO0_FILES:.mio0=.o) $(SOUND_OBJ_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES)
+	$(LD) -L $(BUILD_DIR) -o $@ $(O_FILES) $(SOUND_OBJ_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(LDFLAGS)
+$(EXE): $(ELF)
+	@cp $< $*.strip.elf
+	$(SILENTCMD)$(STRIP) -g $*.strip.elf $(ERROR_FILTER)
+	$(SILENTCMD)elf2rpl $*.strip.elf $@ $(ERROR_FILTER)
+	@rm $*.strip.elf
+	@echo built ... $(notdir $@)
+else
 $(EXE): $(O_FILES) $(MIO0_FILES:.mio0=.o) $(SOUND_OBJ_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES)
 	$(LD) -L $(BUILD_DIR) -o $@ $(O_FILES) $(SOUND_OBJ_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(LDFLAGS)
+endif
 endif
 
 
