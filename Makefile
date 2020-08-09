@@ -324,7 +324,9 @@ GENERATED_C_FILES := $(BUILD_DIR)/assets/mario_anim_data.c $(BUILD_DIR)/assets/d
   $(addprefix $(BUILD_DIR)/bin/,$(addsuffix _skybox.c,$(notdir $(basename $(wildcard textures/skyboxes/*.png)))))
 
 ifeq ($(TARGET_WINDOWS),0)
-  CXX_FILES :=
+  ifeq ($(TARGET_WII_U),0)
+    CXX_FILES :=
+  endif
 endif
 
 ifneq ($(TARGET_N64),1)
@@ -497,7 +499,7 @@ ifeq ($(TARGET_LINUX),1)
   PLATFORM_LDFLAGS := -lm -lpthread `pkg-config --libs libusb-1.0` -lasound -lpulse -no-pie
 endif
 ifeq ($(TARGET_WII_U),1)
-  PLATFORM_CFLAGS  := -DTARGET_WII_U -ffunction-sections $(MACHDEP) -D__WIIU__ -D__WUT__ $(INCLUDE)
+  PLATFORM_CFLAGS  := -DTARGET_WII_U -ffunction-sections $(MACHDEP) -ffast-math -D__WIIU__ -D__WUT__ $(INCLUDE)
   PLATFORM_LDFLAGS := -lm -no-pie -g $(MACHDEP) $(RPXSPECS) $(LIBPATHS)
 endif
 ifeq ($(TARGET_WEB),1)

@@ -1,4 +1,5 @@
-#version 110
+
+#version 130
 
 attribute vec4 aVtxPos;
 
@@ -20,9 +21,9 @@ varying   vec4 vInput3;
 attribute vec4 aInput4;
 varying   vec4 vInput4;
 
-uniform   uint tex_flags;
+uniform   int  tex_flags;
 uniform   bool fog_used;
-uniform   uint num_inputs;
+uniform   int  num_inputs;
 
 void main() {
     if (tex_flags != 0) {

@@ -265,6 +265,7 @@ void main_func(void) {
     WHBLogPrint("Quitting.");
 
     SDL_Quit();
+    whb_free();
 
     WHBLogCafeDeinit();
     WHBLogUdpDeinit();

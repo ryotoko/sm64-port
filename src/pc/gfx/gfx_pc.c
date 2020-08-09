@@ -65,11 +65,7 @@ struct TextureHashmapNode {
 };
 static struct {
     struct TextureHashmapNode *hashmap[1024];
-#ifdef TARGET_WII_U
-    struct TextureHashmapNode pool[1];
-#else
     struct TextureHashmapNode pool[512];
-#endif
     uint32_t pool_pos;
 } gfx_texture_cache;
 

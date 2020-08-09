@@ -1,4 +1,5 @@
-#version 110
+
+#version 130
 
 varying vec2      vTexCoord;
 varying vec4      vFog;
@@ -13,14 +14,14 @@ uniform sampler2D uTex1;
 uniform int       frame_count;
 uniform int       window_height;
 
-uniform uint      tex_flags;
+uniform int       tex_flags;
 uniform bool      fog_used;
 uniform bool      alpha_used;
 uniform bool      noise_used;
 uniform bool      texture_edge;
 uniform bool      color_alpha_same;
 
-uniform uvec4     c[2];
+uniform ivec4     c[2];
 uniform bool      do_single[2];
 uniform bool      do_multiply[2];
 uniform bool      do_mix[2];
@@ -33,7 +34,7 @@ float random(in vec3 value) {
     return fract(sin(random) * 143758.5453);
 }
 
-vec3 get_color(uint item) {
+vec3 get_color(int item) {
     switch (item) {
         case 0: // SHADER_0
             return vec3(0.0, 0.0, 0.0);
@@ -56,7 +57,7 @@ vec3 get_color(uint item) {
     return vec3(0.0, 0.0, 0.0);
 }
 
-float get_alpha(uint item) {
+float get_alpha(int item) {
     switch (item) {
         case 0: //SHADER_0
             return 0.0;
@@ -80,7 +81,7 @@ float get_alpha(uint item) {
 
 }
 
-vec4 get_color_alpha(uint item) {
+vec4 get_color_alpha(int item) {
     switch (item) {
         case 0: // SHADER_0
             return vec4(0.0, 0.0, 0.0, 0.0);
@@ -157,14 +158,14 @@ vec4 get_texel() {
 void main() {
     switch (tex_flags) {
         case 1:
-            texVal0 = texture2D(uTex0, vTexCoord);
+            texVal0 = texture(uTex0, vTexCoord);
             break;
         case 2:
-            texVal1 = texture2D(uTex1, vTexCoord);
+            texVal1 = texture(uTex1, vTexCoord);
             break;
         case 3:
-            texVal0 = texture2D(uTex0, vTexCoord);
-            texVal1 = texture2D(uTex1, vTexCoord);
+            texVal0 = texture(uTex0, vTexCoord);
+            texVal1 = texture(uTex1, vTexCoord);
             break;
     }
 
