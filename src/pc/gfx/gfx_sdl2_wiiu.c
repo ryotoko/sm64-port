@@ -8,6 +8,7 @@
 
 #include "gfx_window_manager_api.h"
 #include "gfx_screen_config.h"
+#include "gfx_whb.h"
 
 #define GFX_API_NAME "SDL2 - WHB"
 
@@ -117,6 +118,7 @@ static bool gfx_sdl_start_frame(void) {
 
 static void gfx_sdl_swap_buffers_begin(void) {
     WHBGfxFinishRender();
+    whb_free_vbo();
 }
 
 static void gfx_sdl_swap_buffers_end(void) {

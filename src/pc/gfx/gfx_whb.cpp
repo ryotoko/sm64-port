@@ -47,6 +47,7 @@ static struct ShaderProgram shader_program_pool[64];
 static uint8_t shader_program_pool_size = 0;
 
 static struct ShaderProgram *current_shader_program = NULL;
+static std::vector<float*> vbo_array;
 
 static std::vector<Texture> whb_textures;
 static uint8_t current_tile = 0;
@@ -405,9 +406,18 @@ static void gfx_whb_set_use_alpha(bool use_alpha) {
 }
 
 static void gfx_whb_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size_t buf_vbo_num_tris) {
-    GX2Invalidate(GX2_INVALIDATE_MODE_CPU_ATTRIBUTE_BUFFER, buf_vbo, sizeof(float) * buf_vbo_len);
+    uint32_t idx = vbo_array.size();
+    vbo_array.resize(idx + 1);
 
-    GX2SetAttribBuffer(0, sizeof(float) * buf_vbo_len, sizeof(float) * current_shader_program->num_floats, buf_vbo);
+    size_t vbo_len = sizeof(float) * buf_vbo_len;
+    vbo_array[idx] = static_cast<float*>(memalign(4, vbo_len));
+
+    float* new_vbo = vbo_array[idx];
+    memcpy(new_vbo, buf_vbo, vbo_len);
+
+    GX2Invalidate(GX2_INVALIDATE_MODE_CPU_ATTRIBUTE_BUFFER, new_vbo, vbo_len);
+
+    GX2SetAttribBuffer(0, vbo_len, sizeof(float) * current_shader_program->num_floats, new_vbo);
     GX2DrawEx(GX2_PRIMITIVE_MODE_TRIANGLES, 3 * buf_vbo_num_tris, 0, 1);
 }
 
@@ -430,6 +440,14 @@ static void gfx_whb_end_frame(void) {
 }
 
 static void gfx_whb_finish_render(void) {
+}
+
+extern "C" void whb_free_vbo(void) {
+    for (uint32_t i = 0; i < vbo_array.size(); i++) {
+        free(vbo_array[i]);
+    }
+
+    vbo_array.clear();
 }
 
 extern "C" void whb_free(void) {
