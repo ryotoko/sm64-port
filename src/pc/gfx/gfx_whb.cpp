@@ -82,15 +82,6 @@ s32 GX2GetPixelSamplerVarLocation(const GX2PixelShader *shader, const char *name
     return sampler->location;
 }
 
-s32 GX2GetVertexUniformVarOffset(const GX2VertexShader *shader, const char *name)
-{
-    GX2UniformVar *uniform = GX2GetVertexUniformVar(shader, name);
-    if (!uniform)
-        return -1;
-
-    return uniform->offset;
-}
-
 s32 GX2GetPixelUniformVarOffset(const GX2PixelShader *shader, const char *name)
 {
     GX2UniformVar *uniform = GX2GetPixelUniformVar(shader, name);
@@ -113,6 +104,7 @@ static void gfx_whb_unload_shader(struct ShaderProgram *old_prg) {
 }
 
 static void gfx_whb_set_uniforms(struct ShaderProgram *prg) {
+    /*
     if (prg->used_noise) {
         uint32_t frame_count_array[4] = { frame_count, 0, 0, 0 };
         uint32_t window_height_array[4] = { current_height, 0, 0, 0 };
@@ -120,6 +112,7 @@ static void gfx_whb_set_uniforms(struct ShaderProgram *prg) {
         GX2SetPixelUniformReg(prg->frame_count_offset, 4, frame_count_array);
         GX2SetPixelUniformReg(prg->window_height_offset, 4, window_height_array);
     }
+    */
 }
 
 static void gfx_whb_load_shader(struct ShaderProgram *new_prg) {
@@ -199,11 +192,13 @@ error:
 
     gfx_whb_load_shader(prg);
 
+    /*
     prg->samplers_location[0] = GX2GetPixelSamplerVarLocation(prg->group.pixelShader, "uTex0");
     prg->samplers_location[1] = GX2GetPixelSamplerVarLocation(prg->group.pixelShader, "uTex1");
 
     prg->frame_count_offset = GX2GetPixelUniformVarOffset(prg->group.pixelShader, "frame_count");
     prg->window_height_offset = GX2GetPixelUniformVarOffset(prg->group.pixelShader, "window_height");
+    */
 
     if (cc_features.opt_alpha && cc_features.opt_noise) {
         prg->used_noise = true;
@@ -213,32 +208,28 @@ error:
 
     WHBLogPrint("Initiated Tex/Frame/Height uniforms.");
 
-    int32_t  c_array[2][4] = { { cc_features.c[0][0], cc_features.c[0][1], cc_features.c[0][2], cc_features.c[0][3] }, { cc_features.c[1][0], cc_features.c[1][1], cc_features.c[1][2], cc_features.c[1][3] } };
-    uint32_t alpha_used_array[4] = { cc_features.opt_alpha, 0, 0, 0 };
+    /*
+    int32_t  c_array[4] = { cc_features.c[0][0], cc_features.c[0][1], cc_features.c[0][2], cc_features.c[0][3] };
+    int32_t  a_array[4] = { cc_features.c[1][0], cc_features.c[1][1], cc_features.c[1][2], cc_features.c[1][3] };
     uint32_t fog_used_array[4] = { cc_features.opt_fog, 0, 0, 0 };
     uint32_t texture_edge_array[4] = { cc_features.opt_texture_edge, 0, 0, 0 };
     uint32_t noise_used_array[4] = { cc_features.opt_noise, 0, 0, 0 };
-    int32_t  tex_flags_array[4] = { cc_features.used_textures[0] | (cc_features.used_textures[1] << 1), 0, 0, 0 };
-    int32_t  num_inputs_array[4] = { cc_features.num_inputs, 0, 0, 0 };
-    uint32_t do_single_array[4] = { cc_features.do_single[0], cc_features.do_single[1], 0, 0 };
-    uint32_t do_multiply_array[4] = { cc_features.do_multiply[0], cc_features.do_multiply[1], 0, 0 };
-    uint32_t do_mix_array[4] = { cc_features.do_mix[0], cc_features.do_mix[1], 0, 0 };
+    int32_t  tex_flags_array[4] = { (int32_t)((bool)cc_features.used_textures[0]) | ((int32_t)((bool)cc_features.used_textures[1]) << 1), 0, 0, 0 };
+    int32_t  texel_mode_array[4] = { (int32_t)((bool)cc_features.do_single[0]) | ((int32_t)((bool)cc_features.do_multiply[0]) << 1) | ((int32_t)((bool)cc_features.do_mix[0]) << 2), 0, 0, 0 };
     uint32_t color_alpha_same_array[4] = { cc_features.color_alpha_same, 0, 0, 0 };
 
-    GX2SetVertexUniformReg(GX2GetVertexUniformVarOffset(prg->group.vertexShader, "fog_used"), 4, fog_used_array);
-    GX2SetVertexUniformReg(GX2GetVertexUniformVarOffset(prg->group.vertexShader, "tex_flags"), 4, tex_flags_array);
-    GX2SetVertexUniformReg(GX2GetVertexUniformVarOffset(prg->group.vertexShader, "num_inputs"), 4, num_inputs_array);
-
-    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "c"), 8, c_array);
-    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "alpha_used"), 4, alpha_used_array);
+    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "c"), 4, c_array);
     GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "fog_used"), 4, fog_used_array);
-    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "texture_edge"), 4, texture_edge_array);
-    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "noise_used"), 4, noise_used_array);
     GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "tex_flags"), 4, tex_flags_array);
-    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "do_single"), 4, do_single_array);
-    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "do_multiply"), 4, do_multiply_array);
-    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "do_mix"), 4, do_mix_array);
-    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "color_alpha_same"), 4, color_alpha_same_array);
+    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "texel_mode"), 4, texel_mode_array);
+
+    //if (cc_features.opt_alpha) {
+    //    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "a"), 4, a_array);
+    //    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "texture_edge"), 4, texture_edge_array);
+    //    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "noise_used"), 4, noise_used_array);
+    //    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "color_alpha_same"), 4, color_alpha_same_array);
+    //}
+    */
 
     WHBLogPrint("Initiated Shader.");
 
@@ -276,10 +267,10 @@ static void gfx_whb_select_texture(int tile, uint32_t texture_id) {
     current_texture_ids[tile] = texture_id;
 
     Texture& texture = whb_textures[texture_id];
-    if (texture.textureUploaded)
-        GX2SetPixelTexture(&texture.texture, current_shader_program->samplers_location[tile]);
-    if (texture.samplerSet)
-        GX2SetPixelSampler(&texture.sampler, current_shader_program->samplers_location[tile]);
+    //if (texture.textureUploaded)
+    //    GX2SetPixelTexture(&texture.texture, current_shader_program->samplers_location[tile]);
+    //if (texture.samplerSet)
+    //    GX2SetPixelSampler(&texture.sampler, current_shader_program->samplers_location[tile]);
 }
 
 static void gfx_whb_upload_texture(const uint8_t *rgba32_buf, int width, int height) {
@@ -330,7 +321,7 @@ static void gfx_whb_upload_texture(const uint8_t *rgba32_buf, int width, int hei
     GX2Invalidate(GX2_INVALIDATE_MODE_CPU_TEXTURE, (void *)rgba32_buf, surf.imageSize);
     GX2CopySurface(&surf, 0, 0, &texture.surface, 0, 0);
 
-    GX2SetPixelTexture(&texture, current_shader_program->samplers_location[tile]);
+    //GX2SetPixelTexture(&texture, current_shader_program->samplers_location[tile]);
     whb_textures[current_texture_ids[tile]].textureUploaded = true;
 
     //WHBLogPrint("Texture set.");
@@ -350,7 +341,7 @@ static void gfx_whb_set_sampler_parameters(int tile, bool linear_filter, uint32_
     GX2InitSampler(sampler, GX2_TEX_CLAMP_MODE_CLAMP, linear_filter ? GX2_TEX_XY_FILTER_MODE_LINEAR : GX2_TEX_XY_FILTER_MODE_POINT);
     GX2InitSamplerClamping(sampler, gfx_cm_to_gx2(cms), gfx_cm_to_gx2(cmt), GX2_TEX_CLAMP_MODE_WRAP);
 
-    GX2SetPixelSampler(sampler, current_shader_program->samplers_location[tile]);
+    //GX2SetPixelSampler(sampler, current_shader_program->samplers_location[tile]);
     whb_textures[current_texture_ids[tile]].samplerSet = true;
 }
 
