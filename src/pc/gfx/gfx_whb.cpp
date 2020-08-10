@@ -192,10 +192,10 @@ error:
 
     gfx_whb_load_shader(prg);
 
-    /*
     prg->samplers_location[0] = GX2GetPixelSamplerVarLocation(prg->group.pixelShader, "uTex0");
     prg->samplers_location[1] = GX2GetPixelSamplerVarLocation(prg->group.pixelShader, "uTex1");
 
+    /*
     prg->frame_count_offset = GX2GetPixelUniformVarOffset(prg->group.pixelShader, "frame_count");
     prg->window_height_offset = GX2GetPixelUniformVarOffset(prg->group.pixelShader, "window_height");
     */
@@ -267,10 +267,10 @@ static void gfx_whb_select_texture(int tile, uint32_t texture_id) {
     current_texture_ids[tile] = texture_id;
 
     Texture& texture = whb_textures[texture_id];
-    //if (texture.textureUploaded)
-    //    GX2SetPixelTexture(&texture.texture, current_shader_program->samplers_location[tile]);
-    //if (texture.samplerSet)
-    //    GX2SetPixelSampler(&texture.sampler, current_shader_program->samplers_location[tile]);
+    if (texture.textureUploaded)
+        GX2SetPixelTexture(&texture.texture, current_shader_program->samplers_location[tile]);
+    if (texture.samplerSet)
+        GX2SetPixelSampler(&texture.sampler, current_shader_program->samplers_location[tile]);
 }
 
 static void gfx_whb_upload_texture(const uint8_t *rgba32_buf, int width, int height) {
@@ -321,7 +321,7 @@ static void gfx_whb_upload_texture(const uint8_t *rgba32_buf, int width, int hei
     GX2Invalidate(GX2_INVALIDATE_MODE_CPU_TEXTURE, (void *)rgba32_buf, surf.imageSize);
     GX2CopySurface(&surf, 0, 0, &texture.surface, 0, 0);
 
-    //GX2SetPixelTexture(&texture, current_shader_program->samplers_location[tile]);
+    GX2SetPixelTexture(&texture, current_shader_program->samplers_location[tile]);
     whb_textures[current_texture_ids[tile]].textureUploaded = true;
 
     //WHBLogPrint("Texture set.");
@@ -341,7 +341,7 @@ static void gfx_whb_set_sampler_parameters(int tile, bool linear_filter, uint32_
     GX2InitSampler(sampler, GX2_TEX_CLAMP_MODE_CLAMP, linear_filter ? GX2_TEX_XY_FILTER_MODE_LINEAR : GX2_TEX_XY_FILTER_MODE_POINT);
     GX2InitSamplerClamping(sampler, gfx_cm_to_gx2(cms), gfx_cm_to_gx2(cmt), GX2_TEX_CLAMP_MODE_WRAP);
 
-    //GX2SetPixelSampler(sampler, current_shader_program->samplers_location[tile]);
+    GX2SetPixelSampler(sampler, current_shader_program->samplers_location[tile]);
     whb_textures[current_texture_ids[tile]].samplerSet = true;
 }
 
