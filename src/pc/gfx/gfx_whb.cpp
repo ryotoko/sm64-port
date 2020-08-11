@@ -436,15 +436,15 @@ static void gfx_whb_set_depth_mask(bool z_upd) {
 
 static void gfx_whb_set_zmode_decal(bool zmode_decal) {
     if (zmode_decal) {
-        GX2SetPolygonControl(GX2_FRONT_FACE_CCW, FALSE, TRUE, FALSE,
+        GX2SetPolygonControl(GX2_FRONT_FACE_CCW, FALSE, FALSE, TRUE,
                              GX2_POLYGON_MODE_TRIANGLE, GX2_POLYGON_MODE_TRIANGLE,
-                             TRUE, FALSE, FALSE);
-        GX2SetPolygonOffset(-2.0f, 1.0f, 0.0f, 0.0f, 0.0f );
+                             TRUE, TRUE, FALSE);
+        GX2SetPolygonOffset(-2.0f, -2.0f, -2.0f, -2.0f, 0.0f );
     } else {
-        GX2SetPolygonControl(GX2_FRONT_FACE_CCW, FALSE, TRUE, FALSE,
+        GX2SetPolygonControl(GX2_FRONT_FACE_CCW, FALSE, FALSE, FALSE,
                              GX2_POLYGON_MODE_TRIANGLE, GX2_POLYGON_MODE_TRIANGLE,
                              FALSE, FALSE, FALSE);
-        GX2SetPolygonOffset( 0.0f, 0.0f, 0.0f, 0.0f, 0.0f );
+        GX2SetPolygonOffset( 0.0f,  0.0f,  0.0f,  0.0f, 0.0f );
     }
 }
 
@@ -505,8 +505,6 @@ static void gfx_whb_start_frame(void) {
 
     WHBGfxBeginRenderTV();
     WHBGfxClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-    GX2SetShaderModeEx(GX2_SHADER_MODE_UNIFORM_REGISTER, 48, 64, 0, 0, 200, 192);
 }
 
 static void gfx_whb_end_frame(void) {
