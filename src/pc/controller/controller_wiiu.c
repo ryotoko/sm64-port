@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include <ultra64.h>
 
@@ -23,6 +24,10 @@ struct WiiUKeymap {
     uint32_t classicButton;
     uint32_t proButton;
 };
+
+typedef struct Vec2D {
+    float x, y;
+} Vec2D;
 
 // Button shortcuts
 #define VB(btn) VPAD_BUTTON_##btn
@@ -60,7 +65,7 @@ static void controller_wiiu_init(void) {
     }
 }
 
-static void read_vpad(OSContPad *pad) {
+static Vec2D read_vpad(OSContPad *pad) {
     VPADStatus status;
     VPADReadError err;
     uint32_t v;
@@ -68,28 +73,20 @@ static void read_vpad(OSContPad *pad) {
     VPADRead(VPAD_CHAN_0, &status, 1, &err);
 
     if (err != 0)
-        return;
+        return (Vec2D) { 0, 0 };
 
     v = status.hold;
 
-    for (int i = 0; i < num_buttons; i++) {
+    for (size_t i = 0; i < num_buttons; i++) {
         if (v & map[i].vpadButton) {
             pad->button |= map[i].n64Button;
         }
     }
 
-    if (status.leftStick.x < 0)
-        pad->stick_x = (s8) (status.leftStick.x * 128);
-    else
-        pad->stick_x = (s8) (status.leftStick.x * 127);
-
-    if (status.leftStick.y < 0)
-        pad->stick_y = (s8) (status.leftStick.y * 128);
-    else
-        pad->stick_y = (s8) (status.leftStick.y * 127);
+    return (Vec2D) { status.leftStick.x, status.leftStick.y };
 }
 
-static void read_wpad(OSContPad* pad) {
+static Vec2D read_wpad(OSContPad* pad) {
     // Disconnect any extra controllers
     for (int i = 1; i < 4; i++) {
         WPADExtensionType ext;
@@ -103,7 +100,7 @@ static void read_wpad(OSContPad* pad) {
     int err;
     int read = KPADReadEx(WPAD_CHAN_0, &status, 1, &err);
     if (read == 0)
-        return;
+        return (Vec2D) { 0, 0 };
 
     uint32_t wm = status.hold;
     KPADVec2D stick;
@@ -138,7 +135,7 @@ static void read_wpad(OSContPad* pad) {
     } else if (status.extensionType == WPAD_EXT_PRO_CONTROLLER) {
         uint32_t ext = status.pro.hold;
         stick = status.pro.leftStick;
-        for (int i = 0; i < num_buttons; i++) {
+        for (size_t i = 0; i < num_buttons; i++) {
             if (ext & map[i].proButton) {
                 pad->button |= map[i].n64Button;
             }
@@ -146,6 +143,21 @@ static void read_wpad(OSContPad* pad) {
         if (ext & WPAD_PRO_BUTTON_MINUS) {
             disconnect = true;
         }
+    }
+
+    if (disconnect)
+        WPADDisconnect(WPAD_CHAN_0);
+
+    return (Vec2D) { stick.x, stick.y };
+}
+
+static void controller_wiiu_read(OSContPad* pad) {
+    Vec2D vstick = read_vpad(pad);
+    Vec2D wstick = read_wpad(pad);
+
+    Vec2D stick = wstick;
+    if (vstick.x != 0 && vstick.y != 0) {
+        stick = vstick;
     }
 
     if (stick.x < 0)
@@ -157,14 +169,6 @@ static void read_wpad(OSContPad* pad) {
         pad->stick_y = (s8) (stick.y * 128);
     else
         pad->stick_y = (s8) (stick.y * 127);
-
-    if (disconnect)
-        WPADDisconnect(WPAD_CHAN_0);
-}
-
-static void controller_wiiu_read(OSContPad* pad) {
-    read_vpad(pad);
-    read_wpad(pad);
 }
 
 struct ControllerAPI controller_wiiu = {
