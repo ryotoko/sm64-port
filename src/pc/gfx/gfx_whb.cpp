@@ -20,6 +20,7 @@
 #include <whb/log.h>
 #include <whb/gfx.h>
 
+#include "shaders_wiiu/shaders_wiiu.h"
 #include "gfx_cc.h"
 #include "gfx_rendering_api.h"
 
@@ -53,8 +54,6 @@ static std::vector<Texture> whb_textures;
 static uint8_t current_tile = 0;
 static uint32_t current_texture_ids[2];
 
-extern const uint8_t shader_wiiu[];
-
 static uint32_t frame_count = 0;
 static uint32_t current_height = 0;
 
@@ -82,6 +81,7 @@ s32 GX2GetPixelSamplerVarLocation(const GX2PixelShader *shader, const char *name
     return sampler->location;
 }
 
+/*
 s32 GX2GetPixelUniformVarOffset(const GX2PixelShader *shader, const char *name)
 {
     GX2UniformVar *uniform = GX2GetPixelUniformVar(shader, name);
@@ -90,6 +90,7 @@ s32 GX2GetPixelUniformVarOffset(const GX2PixelShader *shader, const char *name)
 
     return uniform->offset;
 }
+*/
 
 static bool gfx_whb_z_is_from_0_to_1(void) {
     return false;
@@ -131,11 +132,97 @@ static struct ShaderProgram *gfx_whb_create_and_load_new_shader(uint32_t shader_
 
     struct ShaderProgram *prg = &shader_program_pool[shader_program_pool_size++];
 
-    if (!WHBGfxLoadGFDShaderGroup(&prg->group, 0, shader_wiiu)) {
+    const uint8_t *shader_wiiu;
+
+    switch (shader_id) {
+        case 0x01200200:
+            shader_wiiu = shader_wiiu_01200200;
+            break;
+        case 0x00000045:
+            shader_wiiu = shader_wiiu_00000045;
+            break;
+        case 0x00000200:
+            shader_wiiu = shader_wiiu_00000200;
+            break;
+        case 0x01200a00:
+            shader_wiiu = shader_wiiu_01200a00;
+            break;
+        case 0x00000a00:
+            shader_wiiu = shader_wiiu_00000a00;
+            break;
+        case 0x01a00045:
+            shader_wiiu = shader_wiiu_01a00045;
+            break;
+        case 0x00000551:
+            shader_wiiu = shader_wiiu_00000551;
+            break;
+        case 0x01045045:
+            shader_wiiu = shader_wiiu_01045045;
+            break;
+        case 0x05a00a00:
+            shader_wiiu = shader_wiiu_05a00a00;
+            break;
+        case 0x01200045:
+            shader_wiiu = shader_wiiu_01200045;
+            break;
+        case 0x05045045:
+            shader_wiiu = shader_wiiu_05045045;
+            break;
+        case 0x01045a00:
+            shader_wiiu = shader_wiiu_01045a00;
+            break;
+        case 0x01a00a00:
+            shader_wiiu = shader_wiiu_01a00a00;
+            break;
+        case 0x0000038d:
+            shader_wiiu = shader_wiiu_0000038d;
+            break;
+        case 0x01081081:
+            shader_wiiu = shader_wiiu_01081081;
+            break;
+        case 0x0120038d:
+            shader_wiiu = shader_wiiu_0120038d;
+            break;
+        case 0x03200045:
+            shader_wiiu = shader_wiiu_03200045;
+            break;
+        case 0x03200a00:
+            shader_wiiu = shader_wiiu_03200a00;
+            break;
+        case 0x01a00a6f:
+            shader_wiiu = shader_wiiu_01a00a6f;
+            break;
+        case 0x01141045:
+            shader_wiiu = shader_wiiu_01141045;
+            break;
+        case 0x07a00a00:
+            shader_wiiu = shader_wiiu_07a00a00;
+            break;
+        case 0x05200200:
+            shader_wiiu = shader_wiiu_05200200;
+            break;
+        case 0x03200200:
+            shader_wiiu = shader_wiiu_03200200;
+            break;
+        case 0x09200200:
+            shader_wiiu = shader_wiiu_09200200;
+            break;
+        case 0x0920038d:
+            shader_wiiu = shader_wiiu_0920038d;
+            break;
+        case 0x09200045:
+            shader_wiiu = shader_wiiu_09200045;
+            break;
+        default:
 error:
-        WHBLogPrint("Shader create failed!");
-        shader_program_pool_size--;
-        return NULL;
+            WHBLogPrint("Shader create failed!");
+            shader_program_pool_size--;
+            current_shader_program = NULL;
+            return NULL;
+    }
+
+    if (!WHBGfxLoadGFDShaderGroup(&prg->group, 0, shader_wiiu)) {
+        goto error;
     }
 
     WHBLogPrint("Loaded GFD.");
@@ -192,6 +279,8 @@ error:
 
     gfx_whb_load_shader(prg);
 
+    WHBLogPrintf("Shader mode: %u", (uint32_t)prg->group.pixelShader->mode);
+
     prg->samplers_location[0] = GX2GetPixelSamplerVarLocation(prg->group.pixelShader, "uTex0");
     prg->samplers_location[1] = GX2GetPixelSamplerVarLocation(prg->group.pixelShader, "uTex1");
 
@@ -207,30 +296,6 @@ error:
     }
 
     WHBLogPrint("Initiated Tex/Frame/Height uniforms.");
-
-    /*
-    int32_t  c_array[4] = { cc_features.c[0][0], cc_features.c[0][1], cc_features.c[0][2], cc_features.c[0][3] };
-    int32_t  a_array[4] = { cc_features.c[1][0], cc_features.c[1][1], cc_features.c[1][2], cc_features.c[1][3] };
-    uint32_t fog_used_array[4] = { cc_features.opt_fog, 0, 0, 0 };
-    uint32_t texture_edge_array[4] = { cc_features.opt_texture_edge, 0, 0, 0 };
-    uint32_t noise_used_array[4] = { cc_features.opt_noise, 0, 0, 0 };
-    int32_t  tex_flags_array[4] = { (int32_t)((bool)cc_features.used_textures[0]) | ((int32_t)((bool)cc_features.used_textures[1]) << 1), 0, 0, 0 };
-    int32_t  texel_mode_array[4] = { (int32_t)((bool)cc_features.do_single[0]) | ((int32_t)((bool)cc_features.do_multiply[0]) << 1) | ((int32_t)((bool)cc_features.do_mix[0]) << 2), 0, 0, 0 };
-    uint32_t color_alpha_same_array[4] = { cc_features.color_alpha_same, 0, 0, 0 };
-
-    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "c"), 4, c_array);
-    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "fog_used"), 4, fog_used_array);
-    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "tex_flags"), 4, tex_flags_array);
-    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "texel_mode"), 4, texel_mode_array);
-
-    //if (cc_features.opt_alpha) {
-    //    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "a"), 4, a_array);
-    //    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "texture_edge"), 4, texture_edge_array);
-    //    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "noise_used"), 4, noise_used_array);
-    //    GX2SetPixelUniformReg(GX2GetPixelUniformVarOffset(prg->group.pixelShader, "color_alpha_same"), 4, color_alpha_same_array);
-    //}
-    */
-
     WHBLogPrint("Initiated Shader.");
 
     return prg;
@@ -246,9 +311,15 @@ static struct ShaderProgram *gfx_whb_lookup_shader(uint32_t shader_id) {
 }
 
 static void gfx_whb_shader_get_info(struct ShaderProgram *prg, uint8_t *num_inputs, bool used_textures[2]) {
-    *num_inputs = prg->num_inputs;
-    used_textures[0] = prg->used_textures[0];
-    used_textures[1] = prg->used_textures[1];
+    if (prg != NULL) {
+        *num_inputs = prg->num_inputs;
+        used_textures[0] = prg->used_textures[0];
+        used_textures[1] = prg->used_textures[1];
+    } else {
+        *num_inputs = 0;
+        used_textures[0] = false;
+        used_textures[1] = false;
+    }
 }
 
 static uint32_t gfx_whb_new_texture(void) {
@@ -266,11 +337,15 @@ static void gfx_whb_select_texture(int tile, uint32_t texture_id) {
     current_tile = tile;
     current_texture_ids[tile] = texture_id;
 
-    Texture& texture = whb_textures[texture_id];
-    if (texture.textureUploaded)
-        GX2SetPixelTexture(&texture.texture, current_shader_program->samplers_location[tile]);
-    if (texture.samplerSet)
-        GX2SetPixelSampler(&texture.sampler, current_shader_program->samplers_location[tile]);
+    if (current_shader_program != NULL) {
+        Texture& texture = whb_textures[texture_id];
+        if (texture.textureUploaded) {
+            GX2SetPixelTexture(&texture.texture, current_shader_program->samplers_location[tile]);
+        }
+        if (texture.samplerSet) {
+            GX2SetPixelSampler(&texture.sampler, current_shader_program->samplers_location[tile]);
+        }
+    }
 }
 
 static void gfx_whb_upload_texture(const uint8_t *rgba32_buf, int width, int height) {
@@ -321,7 +396,9 @@ static void gfx_whb_upload_texture(const uint8_t *rgba32_buf, int width, int hei
     GX2Invalidate(GX2_INVALIDATE_MODE_CPU_TEXTURE, (void *)rgba32_buf, surf.imageSize);
     GX2CopySurface(&surf, 0, 0, &texture.surface, 0, 0);
 
-    GX2SetPixelTexture(&texture, current_shader_program->samplers_location[tile]);
+    if (current_shader_program != NULL) {
+        GX2SetPixelTexture(&texture, current_shader_program->samplers_location[tile]);
+    }
     whb_textures[current_texture_ids[tile]].textureUploaded = true;
 
     //WHBLogPrint("Texture set.");
@@ -341,7 +418,9 @@ static void gfx_whb_set_sampler_parameters(int tile, bool linear_filter, uint32_
     GX2InitSampler(sampler, GX2_TEX_CLAMP_MODE_CLAMP, linear_filter ? GX2_TEX_XY_FILTER_MODE_LINEAR : GX2_TEX_XY_FILTER_MODE_POINT);
     GX2InitSamplerClamping(sampler, gfx_cm_to_gx2(cms), gfx_cm_to_gx2(cmt), GX2_TEX_CLAMP_MODE_WRAP);
 
-    GX2SetPixelSampler(sampler, current_shader_program->samplers_location[tile]);
+    if (current_shader_program != NULL) {
+        GX2SetPixelSampler(sampler, current_shader_program->samplers_location[tile]);
+    }
     whb_textures[current_texture_ids[tile]].samplerSet = true;
 }
 
@@ -397,6 +476,9 @@ static void gfx_whb_set_use_alpha(bool use_alpha) {
 }
 
 static void gfx_whb_draw_triangles(float buf_vbo[], size_t buf_vbo_len, size_t buf_vbo_num_tris) {
+    if (current_shader_program == NULL)
+        return;
+
     uint32_t idx = vbo_array.size();
     vbo_array.resize(idx + 1);
 
@@ -422,7 +504,9 @@ static void gfx_whb_start_frame(void) {
     frame_count++;
 
     WHBGfxBeginRenderTV();
-    WHBGfxClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    WHBGfxClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+    GX2SetShaderModeEx(GX2_SHADER_MODE_UNIFORM_REGISTER, 48, 64, 0, 0, 200, 192);
 }
 
 static void gfx_whb_end_frame(void) {

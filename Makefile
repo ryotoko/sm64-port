@@ -269,6 +269,10 @@ else
 endif
 BIN_DIRS := bin bin/$(VERSION)
 
+ifeq ($(TARGET_WII_U),1)
+  SRC_DIRS := $(SRC_DIRS) src/pc/gfx/shaders_wiiu
+endif
+
 ULTRA_SRC_DIRS := lib/src lib/src/math
 ULTRA_ASM_DIRS := lib/asm lib/data
 ULTRA_BIN_DIRS := lib/bin
