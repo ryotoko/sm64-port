@@ -8,6 +8,8 @@
 
 #if defined(_WIN32) || defined(_WIN64)
 #include "controller_xinput.h"
+#elif defined(TARGET_WII_U)
+#include "controller_wiiu.h"
 #else
 #include "controller_sdl.h"
 #endif
@@ -20,6 +22,8 @@ static struct ControllerAPI *controller_implementations[] = {
     &controller_recorded_tas,
 #if defined(_WIN32) || defined(_WIN64)
     &controller_xinput,
+#elif defined(__WIIU__)
+    &controller_wiiu,
 #else
     &controller_sdl,
 #endif
