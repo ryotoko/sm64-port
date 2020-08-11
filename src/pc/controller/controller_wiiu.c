@@ -66,6 +66,10 @@ static void read_vpad(OSContPad *pad) {
     uint32_t v;
 
     VPADRead(VPAD_CHAN_0, &status, 1, &err);
+
+    if (err != 0)
+        return;
+
     v = status.hold;
 
     for (int i = 0; i < num_buttons; i++) {
