@@ -8,12 +8,56 @@
 #include <padscore/kpad.h>
 
 #include "controller_api.h"
+#include "../configfile.h"
+
+uint32_t vpad_jump_buttons = VPAD_BUTTON_B | VPAD_BUTTON_A;
+uint32_t classic_jump_buttons = WPAD_CLASSIC_BUTTON_B | WPAD_CLASSIC_BUTTON_A;
+uint32_t pro_jump_buttons = WPAD_PRO_BUTTON_B | WPAD_PRO_BUTTON_A;
+uint32_t vpad_punch_buttons = VPAD_BUTTON_Y | VPAD_BUTTON_X;
+uint32_t classic_punch_buttons = WPAD_CLASSIC_BUTTON_Y | WPAD_CLASSIC_BUTTON_X;
+uint32_t pro_punch_buttons = WPAD_PRO_BUTTON_Y | WPAD_PRO_BUTTON_X;
+
+struct WiiUKeymap {
+    uint32_t n64Button;
+    uint32_t vpadButton;
+    uint32_t classicButton;
+    uint32_t proButton;
+};
+
+// Button shortcuts
+#define VB(btn) VPAD_BUTTON_##btn
+#define CB(btn) WPAD_CLASSIC_BUTTON_##btn
+#define PB(btn) WPAD_PRO_BUTTON_##btn
+#define PT(btn) WPAD_PRO_TRIGGER_##btn
+
+// Stick emulation
+#define SE(dir) VPAD_STICK_R_EMULATION_##dir, WPAD_CLASSIC_STICK_R_EMULATION_##dir, WPAD_PRO_STICK_R_EMULATION_##dir
+
+struct WiiUKeymap map[] = {
+    { B_BUTTON, VB(X) | VB(A), CB(X) | CB(A), PB(X) | PB(A) },
+    { A_BUTTON, VB(Y) | VB(B), CB(Y) | CB(B), PB(Y) | PB(B) },
+    { START_BUTTON, VB(PLUS), CB(PLUS), PB(PLUS) },
+    { Z_TRIG, VB(L) | VB(ZL), CB(L) | CB(ZL), PT(L) | PT(ZL) },
+    { R_TRIG, VB(R) | VB(ZR), CB(R) | CB(ZR), PT(R) | PT(ZR) },
+    { U_CBUTTONS, SE(UP) },
+    { D_CBUTTONS, SE(DOWN) },
+    { L_CBUTTONS, SE(LEFT) },
+    { R_CBUTTONS, SE(RIGHT) }
+};
+size_t num_buttons = sizeof(map) / sizeof(map[0]);
 
 static void controller_wiiu_init(void) {
     VPADInit();
     KPADInit();
     WPADEnableURCC(1);
     WPADEnableWiiRemote(1);
+
+    if (configN64FaceButtons) {
+        struct WiiUKeymap b = { B_BUTTON, VB(Y) | VB(X), CB(Y) | CB(X), PB(Y) | PB(X) };
+        struct WiiUKeymap a = { A_BUTTON, VB(B) | VB(A), CB(B) | CB(A), PB(B) | PB(A) };
+        map[0] = b;
+        map[1] = a;
+    }
 }
 
 static void read_vpad(OSContPad *pad) {
@@ -24,15 +68,11 @@ static void read_vpad(OSContPad *pad) {
     VPADRead(VPAD_CHAN_0, &status, 1, &err);
     v = status.hold;
 
-    if (v & VPAD_BUTTON_B || v & VPAD_BUTTON_A) pad->button |= A_BUTTON;
-    if (v & VPAD_BUTTON_Y || v & VPAD_BUTTON_X) pad->button |= B_BUTTON;
-    if (v & VPAD_BUTTON_ZL || v & VPAD_BUTTON_L) pad->button |= Z_TRIG;
-    if (v & VPAD_BUTTON_R || v & VPAD_BUTTON_ZR) pad->button |= R_TRIG;
-    if (v & VPAD_BUTTON_PLUS) pad->button |= START_BUTTON;
-    if (v & VPAD_STICK_R_EMULATION_UP) pad->button |= U_CBUTTONS;
-    if (v & VPAD_STICK_R_EMULATION_RIGHT) pad->button |= R_CBUTTONS;
-    if (v & VPAD_STICK_R_EMULATION_DOWN) pad->button |= D_CBUTTONS;
-    if (v & VPAD_STICK_R_EMULATION_LEFT) pad->button |= L_CBUTTONS;
+    for (int i = 0; i < num_buttons; i++) {
+        if (v & map[i].vpadButton) {
+            pad->button |= map[i].n64Button;
+        }
+    }
 
     if (status.leftStick.x < 0)
         pad->stick_x = (s8) (status.leftStick.x * 128);
@@ -43,7 +83,6 @@ static void read_vpad(OSContPad *pad) {
         pad->stick_y = (s8) (status.leftStick.y * 128);
     else
         pad->stick_y = (s8) (status.leftStick.y * 127);
-
 }
 
 static void read_wpad(OSContPad* pad) {
@@ -84,29 +123,25 @@ static void read_wpad(OSContPad* pad) {
     } else if (status.extensionType == WPAD_EXT_CLASSIC || status.extensionType == WPAD_EXT_MPLUS_CLASSIC) {
         uint32_t ext = status.classic.hold;
         stick = status.classic.leftStick;
-        if (ext & (WPAD_CLASSIC_BUTTON_B | WPAD_CLASSIC_BUTTON_A)) pad->button |= A_BUTTON;
-        if (ext & (WPAD_CLASSIC_BUTTON_Y | WPAD_CLASSIC_BUTTON_X)) pad->button |= B_BUTTON;
-        if (ext & (WPAD_CLASSIC_BUTTON_ZL | WPAD_CLASSIC_BUTTON_L)) pad->button |= Z_TRIG;
-        if (ext & (WPAD_CLASSIC_BUTTON_ZR | WPAD_CLASSIC_BUTTON_R)) pad->button |= R_TRIG;
-        if (ext & WPAD_CLASSIC_STICK_R_EMULATION_UP) pad->button |= U_CBUTTONS;
-        if (ext & WPAD_CLASSIC_STICK_R_EMULATION_DOWN) pad->button |= D_CBUTTONS;
-        if (ext & WPAD_CLASSIC_STICK_R_EMULATION_LEFT) pad->button |= L_CBUTTONS;
-        if (ext & WPAD_CLASSIC_STICK_R_EMULATION_RIGHT) pad->button |= R_CBUTTONS;
-        if (ext & WPAD_CLASSIC_BUTTON_PLUS) pad->button |= START_BUTTON;
-        if (ext & WPAD_CLASSIC_BUTTON_MINUS) disconnect = true;
+        for (size_t i = 0; i < num_buttons; i++) {
+            if (ext & map[i].classicButton) {
+                pad->button |= map[i].n64Button;
+            }
+        }
+        if (ext & WPAD_CLASSIC_BUTTON_MINUS) {
+            disconnect = true;
+        }
     } else if (status.extensionType == WPAD_EXT_PRO_CONTROLLER) {
         uint32_t ext = status.pro.hold;
         stick = status.pro.leftStick;
-        if (ext & (WPAD_PRO_BUTTON_B | WPAD_PRO_BUTTON_A)) pad->button |= A_BUTTON;
-        if (ext & (WPAD_PRO_BUTTON_Y | WPAD_PRO_BUTTON_X)) pad->button |= B_BUTTON;
-        if (ext & (WPAD_PRO_TRIGGER_ZL | WPAD_PRO_TRIGGER_L)) pad->button |= Z_TRIG;
-        if (ext & (WPAD_PRO_TRIGGER_ZR | WPAD_PRO_TRIGGER_R)) pad->button |= R_TRIG;
-        if (ext & WPAD_PRO_STICK_R_EMULATION_UP) pad->button |= U_CBUTTONS;
-        if (ext & WPAD_PRO_STICK_R_EMULATION_DOWN) pad->button |= D_CBUTTONS;
-        if (ext & WPAD_PRO_STICK_R_EMULATION_LEFT) pad->button |= L_CBUTTONS;
-        if (ext & WPAD_PRO_STICK_R_EMULATION_RIGHT) pad->button |= R_CBUTTONS;
-        if (ext & WPAD_PRO_BUTTON_PLUS) pad->button |= START_BUTTON;
-        if (ext & WPAD_PRO_BUTTON_MINUS) disconnect = true;
+        for (int i = 0; i < num_buttons; i++) {
+            if (ext & map[i].proButton) {
+                pad->button |= map[i].n64Button;
+            }
+        }
+        if (ext & WPAD_PRO_BUTTON_MINUS) {
+            disconnect = true;
+        }
     }
 
     if (stick.x < 0)
