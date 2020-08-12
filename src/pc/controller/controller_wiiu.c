@@ -39,8 +39,8 @@ typedef struct Vec2D {
 #define SE(dir) VPAD_STICK_R_EMULATION_##dir, WPAD_CLASSIC_STICK_R_EMULATION_##dir, WPAD_PRO_STICK_R_EMULATION_##dir
 
 struct WiiUKeymap map[] = {
-    { B_BUTTON, VB(X) | VB(A), CB(X) | CB(A), PB(X) | PB(A) },
-    { A_BUTTON, VB(Y) | VB(B), CB(Y) | CB(B), PB(Y) | PB(B) },
+    { B_BUTTON, VB(B), CB(B), PB(B) },
+    { A_BUTTON, VB(A), CB(A), PB(A) },
     { START_BUTTON, VB(PLUS), CB(PLUS), PB(PLUS) },
     { Z_TRIG, VB(L) | VB(ZL), CB(L) | CB(ZL), PT(L) | PT(ZL) },
     { R_TRIG, VB(R) | VB(ZR), CB(R) | CB(ZR), PT(R) | PT(ZR) },
@@ -58,10 +58,8 @@ static void controller_wiiu_init(void) {
     WPADEnableWiiRemote(1);
 
     if (configN64FaceButtons) {
-        struct WiiUKeymap b = { B_BUTTON, VB(Y) | VB(X), CB(Y) | CB(X), PB(Y) | PB(X) };
-        struct WiiUKeymap a = { A_BUTTON, VB(B) | VB(A), CB(B) | CB(A), PB(B) | PB(A) };
-        map[0] = b;
-        map[1] = a;
+        map[0] = (struct WiiUKeymap) { B_BUTTON, VB(Y) | VB(X), CB(Y) | CB(X), PB(Y) | PB(X) };
+        map[1] = (struct WiiUKeymap) { A_BUTTON, VB(B) | VB(A), CB(B) | CB(A), PB(B) | PB(A) };
     }
 }
 

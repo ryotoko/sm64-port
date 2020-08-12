@@ -45,7 +45,7 @@ unsigned int configKeyStickDown  = 0x1F;
 unsigned int configKeyStickLeft  = 0x1E;
 unsigned int configKeyStickRight = 0x20;
 #ifdef TARGET_WII_U
-bool configN64FaceButtons = 1;
+bool configN64FaceButtons = 0;
 #endif
 
 static const struct ConfigOption options[] = {
