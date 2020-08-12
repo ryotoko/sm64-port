@@ -49,6 +49,9 @@ bool configN64FaceButtons = 0;
 #endif
 
 static const struct ConfigOption options[] = {
+#ifdef TARGET_WII_U
+    {.name = "n64_face_buttons", .type = CONFIG_TYPE_BOOL, .boolValue = &configN64FaceButtons},
+#else
     {.name = "fullscreen",     .type = CONFIG_TYPE_BOOL, .boolValue = &configFullscreen},
     {.name = "key_a",          .type = CONFIG_TYPE_UINT, .uintValue = &configKeyA},
     {.name = "key_b",          .type = CONFIG_TYPE_UINT, .uintValue = &configKeyB},
@@ -63,8 +66,6 @@ static const struct ConfigOption options[] = {
     {.name = "key_stickdown",  .type = CONFIG_TYPE_UINT, .uintValue = &configKeyStickDown},
     {.name = "key_stickleft",  .type = CONFIG_TYPE_UINT, .uintValue = &configKeyStickLeft},
     {.name = "key_stickright", .type = CONFIG_TYPE_UINT, .uintValue = &configKeyStickRight},
-#ifdef TARGET_WII_U
-    {.name = "n64_face_buttons", .type = CONFIG_TYPE_BOOL, .boolValue = &configN64FaceButtons}
 #endif
 };
 
