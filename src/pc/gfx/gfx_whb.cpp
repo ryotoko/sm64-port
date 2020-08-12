@@ -31,8 +31,8 @@ struct ShaderProgram {
     bool used_textures[2];
     uint8_t num_floats;
     bool used_noise;
-    uint32_t frame_count_offset;
-    uint32_t window_height_offset;
+    //uint32_t frame_count_offset;
+    //uint32_t window_height_offset;
     uint32_t samplers_location[2];
 };
 
@@ -117,13 +117,15 @@ static void gfx_whb_set_uniforms(struct ShaderProgram *prg) {
 }
 
 static void gfx_whb_load_shader(struct ShaderProgram *new_prg) {
+    current_shader_program = new_prg;
+    if (new_prg == NULL)
+        return;
+
     GX2SetFetchShader(&new_prg->group.fetchShader);
     GX2SetVertexShader(new_prg->group.vertexShader);
     GX2SetPixelShader(new_prg->group.pixelShader);
 
     gfx_whb_set_uniforms(new_prg);
-
-    current_shader_program = new_prg;
 }
 
 static struct ShaderProgram *gfx_whb_create_and_load_new_shader(uint32_t shader_id) {
@@ -213,9 +215,12 @@ static struct ShaderProgram *gfx_whb_create_and_load_new_shader(uint32_t shader_
         case 0x09200045:
             shader_wiiu = shader_wiiu_09200045;
             break;
+        case 0x09200a00:
+            shader_wiiu = shader_wiiu_09200a00;
+            break;
         default:
 error:
-            WHBLogPrint("Shader create failed!");
+            WHBLogPrintf("Shader create failed! shader_id: 0x%x", shader_id);
             shader_program_pool_size--;
             current_shader_program = NULL;
             return NULL;

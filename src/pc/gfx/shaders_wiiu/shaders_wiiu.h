@@ -28,5 +28,6 @@ extern const uint8_t shader_wiiu_03200200[];
 extern const uint8_t shader_wiiu_09200200[];
 extern const uint8_t shader_wiiu_0920038d[];
 extern const uint8_t shader_wiiu_09200045[];
+extern const uint8_t shader_wiiu_09200a00[];
 
 #endif
