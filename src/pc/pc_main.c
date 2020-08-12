@@ -172,7 +172,9 @@ void main_func(void) {
 #endif
 
 #if defined(TARGET_WII_U)
-    WHBLogPrint("Main pool initialized.");
+    save_config(); // Mount SD write now
+
+    WHBLogPrint("Main pool and configfile initialized.");
     rendering_api = &gfx_whb_api;
     wm_api = &gfx_sdl;
 	configFullscreen = true;
