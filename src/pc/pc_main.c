@@ -163,21 +163,6 @@ void main_func(void) {
     main_pool_init(pool, pool + sizeof(pool) / sizeof(pool[0]));
     gEffectsMemoryPool = mem_pool_init(0x4000, MEMORY_POOL_LEFT);
 
-#ifdef TARGET_WII_U
-    WHBLogPrint("Main pool initialized.");
-
-    rendering_api = &gfx_whb_api;
-    wm_api = &gfx_sdl;
-    configFullscreen = true;
-
-    gfx_init(wm_api, rendering_api, "Super Mario 64 PC-Port", true);
-
-    WHBLogPrint("Gfx initialized.");
-
-    wm_api->set_fullscreen_changed_callback(NULL);
-    wm_api->set_keyboard_callbacks(NULL, NULL, NULL);
-
-#else
     configfile_load(CONFIG_FILE);
     atexit(save_config);
 
@@ -186,7 +171,12 @@ void main_func(void) {
     request_anim_frame(on_anim_frame);
 #endif
 
-#if defined(ENABLE_DX12)
+#if defined(TARGET_WII_U)
+    WHBLogPrint("Main pool initialized.");
+    rendering_api = &gfx_whb_api;
+    wm_api = &gfx_sdl;
+	configFullscreen = true;
+#elif defined(ENABLE_DX12)
     rendering_api = &gfx_direct3d12_api;
     wm_api = &gfx_dxgi_api;
 #elif defined(ENABLE_DX11)
@@ -206,7 +196,6 @@ void main_func(void) {
     wm_api->set_fullscreen_changed_callback(on_fullscreen_changed);
     wm_api->set_keyboard_callbacks(keyboard_on_key_down, keyboard_on_key_up, keyboard_on_all_keys_up);
 
-#endif
 
 #if HAVE_WASAPI
     if (audio_api == NULL && audio_wasapi.init()) {

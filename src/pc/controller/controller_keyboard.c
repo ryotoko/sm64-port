@@ -1,5 +1,3 @@
-#ifndef __WIIU__
-
 #include <stdbool.h>
 #include <ultra64.h>
 
@@ -88,5 +86,3 @@ struct ControllerAPI controller_keyboard = {
     keyboard_init,
     keyboard_read
 };
-
-#endif
