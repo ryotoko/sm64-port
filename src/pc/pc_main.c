@@ -13,6 +13,8 @@
 #include <whb/log.h>
 #include <whb/proc.h>
 #include <whb/crash.h>
+
+#include <proc_ui/procui.h>
 #endif
 
 #include "sm64.h"
@@ -256,6 +258,7 @@ void main_func(void) {
     WHBLogPrint("Quitting.");
 
     SDL_Quit();
+    ProcUIShutdown();
 
     whb_free_vbo();
     whb_free();

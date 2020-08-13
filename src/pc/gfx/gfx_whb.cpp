@@ -529,8 +529,7 @@ extern "C" void whb_free_vbo(void) {
 }
 
 extern "C" void whb_free(void) {
-    // Free our textures
-    // TODO: free shaders
+    // Free our textures and shaders
     for (uint32_t i = 0; i < whb_textures.size(); i++) {
         Texture& texture = whb_textures[i];
         if (texture.textureUploaded) {
@@ -538,7 +537,12 @@ extern "C" void whb_free(void) {
         }
     }
 
+    for (uint32_t i = 0; i < shader_program_pool_size; i++) {
+        WHBGfxFreeShaderGroup(&shader_program_pool[i].group);
+    }
+
     whb_textures.clear();
+    shader_program_pool_size = 0;
 }
 
 struct GfxRenderingAPI gfx_whb_api = {
