@@ -459,7 +459,7 @@ static void gfx_whb_set_viewport(int x, int y, int width, int height) {
 }
 
 static void gfx_whb_set_scissor(int x, int y, int width, int height) {
-    GX2SetScissor(x, y, width, height);
+    GX2SetScissor(x, current_height - y - height, width, height);
 }
 
 static void gfx_whb_set_use_alpha(bool use_alpha) {
