@@ -1,3 +1,5 @@
+#ifdef TARGET_WII_U
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
@@ -81,6 +83,11 @@ static Vec2D read_vpad(OSContPad *pad) {
         }
     }
 
+    if (v & VPAD_BUTTON_LEFT) pad->stick_x = -128;
+    if (v & VPAD_BUTTON_RIGHT) pad->stick_x = 127;
+    if (v & VPAD_BUTTON_DOWN) pad->stick_y = -128;
+    if (v & VPAD_BUTTON_UP) pad->stick_y = 127;
+
     return (Vec2D) { status.leftStick.x, status.leftStick.y };
 }
 
@@ -127,6 +134,10 @@ static Vec2D read_wpad(OSContPad* pad) {
                 pad->button |= map[i].n64Button;
             }
         }
+        if (ext & WPAD_CLASSIC_BUTTON_LEFT) pad->stick_x = -128;
+        if (ext & WPAD_CLASSIC_BUTTON_RIGHT) pad->stick_x = 127;
+        if (ext & WPAD_CLASSIC_BUTTON_DOWN) pad->stick_y = -128;
+        if (ext & WPAD_CLASSIC_BUTTON_UP) pad->stick_y = 127;
         if (ext & WPAD_CLASSIC_BUTTON_MINUS) {
             disconnect = true;
         }
@@ -138,6 +149,10 @@ static Vec2D read_wpad(OSContPad* pad) {
                 pad->button |= map[i].n64Button;
             }
         }
+        if (ext & WPAD_PRO_BUTTON_LEFT) pad->stick_x = -128;
+        if (ext & WPAD_PRO_BUTTON_RIGHT) pad->stick_x = 127;
+        if (ext & WPAD_PRO_BUTTON_DOWN) pad->stick_y = -128;
+        if (ext & WPAD_PRO_BUTTON_UP) pad->stick_y = 127;
         if (ext & WPAD_PRO_BUTTON_MINUS) {
             disconnect = true;
         }
@@ -150,6 +165,9 @@ static Vec2D read_wpad(OSContPad* pad) {
 }
 
 static void controller_wiiu_read(OSContPad* pad) {
+    pad->stick_x = 0;
+    pad->stick_y = 0;
+
     Vec2D vstick = read_vpad(pad);
     Vec2D wstick = read_wpad(pad);
 
@@ -160,12 +178,12 @@ static void controller_wiiu_read(OSContPad* pad) {
 
     if (stick.x < 0)
         pad->stick_x = (s8) (stick.x * 128);
-    else
+    else if (pad->stick_x == 0)
         pad->stick_x = (s8) (stick.x * 127);
 
     if (stick.y < 0)
         pad->stick_y = (s8) (stick.y * 128);
-    else
+    else if (pad->stick_y == 0)
         pad->stick_y = (s8) (stick.y * 127);
 }
 
@@ -173,3 +191,5 @@ struct ControllerAPI controller_wiiu = {
     controller_wiiu_init,
     controller_wiiu_read
 };
+
+#endif
