@@ -16,6 +16,7 @@ A prior copy of the game is required to extract the assets.
   * For Windows, you will mainly be using MSYS2.
 2. Install git, make, python3 and SDL2 using pacman: `(dkp-)pacman -S git make python3 wiiu-sdl2`.
 3. Clone the repo: `git clone https://github.com/aboood40091/sm64-port.git`, which will create a directory `sm64-port` and then **enter** it `cd sm64-port`.
+  * Make sure `TARGET_WII_U` is set to 1 in the Makefile. (`TARGET_WII_U ?= 1`)
 4. Place a Super Mario 64 ROM called `baserom.<VERSION>.z64` into the repository's root directory for asset extraction, where `VERSION` can be `us`, `jp`, or `eu`.
 5. Run `make` to build. Qualify the version through `make VERSION=<VERSION>`. Add `-j4` to improve build speed (hardware dependent based on the amount of CPU cores available).
 6. The executable binary will be located at `build/<VERSION>_wiiu/sm64.<VERSION>.f3dex2e.rpx`.
@@ -23,16 +24,15 @@ A prior copy of the game is required to extract the assets.
 
 ### Linux
 
-0. Change `TARGET_WII_U ?= 1` to `TARGET_WII_U ?= 0` in the Makefile.
 1. Install prerequisites (Ubuntu): `sudo apt install -y git build-essential pkg-config libusb-1.0-0-dev libsdl2-dev`.
 2. Clone the repo: `git clone https://github.com/aboood40091/sm64-port.git`, which will create a directory `sm64-port` and then **enter** it `cd sm64-port`.
+  * Make sure `TARGET_WII_U` is set to 0 in the Makefile. (`TARGET_WII_U ?= 0`)
 3. Place a Super Mario 64 ROM called `baserom.<VERSION>.z64` into the repository's root directory for asset extraction, where `VERSION` can be `us`, `jp`, or `eu`.
 4. Run `make` to build. Qualify the version through `make VERSION=<VERSION>`. Add `-j4` to improve build speed (hardware dependent based on the amount of CPU cores available).
 5. The executable binary will be located at `build/<VERSION>_pc/sm64.<VERSION>.f3dex2e`.
 
 ### Windows
 
-0. Change `TARGET_WII_U ?= 1` to `TARGET_WII_U ?= 0` in the Makefile.
 1. Install and update MSYS2, following all the directions listed on https://www.msys2.org/.
 2. From the start menu, launch MSYS2 MinGW and install required packages depending on your machine (do **NOT** launch "MSYS2 MSYS"):
   * 64-bit: Launch "MSYS2 MinGW 64-bit" and install: `pacman -S git make python3 mingw-w64-x86_64-gcc`
@@ -40,6 +40,7 @@ A prior copy of the game is required to extract the assets.
   * Do **NOT** by mistake install the package called simply `gcc`.
 3. The MSYS2 terminal has a _current working directory_ that initially is `C:\msys64\home\<username>` (home directory). At the prompt, you will see the current working directory in yellow. `~` is an alias for the home directory. You can change the current working directory to `My Documents` by entering `cd /c/Users/<username>/Documents`.
 4. Clone the repo: `git clone https://github.com/aboood40091/sm64-port.git`, which will create a directory `sm64-port` and then **enter** it `cd sm64-port`.
+  * Make sure `TARGET_WII_U` is set to 0 in the Makefile. (`TARGET_WII_U ?= 0`)
 5. Place a *Super Mario 64* ROM called `baserom.<VERSION>.z64` into the repository's root directory for asset extraction, where `VERSION` can be `us`, `jp`, or `eu`.
 6. Run `make` to build. Qualify the version through `make VERSION=<VERSION>`. Add `-j4` to improve build speed (hardware dependent based on the amount of CPU cores available).
 7. The executable binary will be located at `build/<VERSION>_pc/sm64.<VERSION>.f3dex2e.exe` inside the repository.
