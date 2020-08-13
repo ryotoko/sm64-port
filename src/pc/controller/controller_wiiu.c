@@ -178,12 +178,12 @@ static void controller_wiiu_read(OSContPad* pad) {
 
     if (stick.x < 0)
         pad->stick_x = (s8) (stick.x * 128);
-    else if (pad->stick_x == 0)
+    else if (stick.x > 0)
         pad->stick_x = (s8) (stick.x * 127);
 
     if (stick.y < 0)
         pad->stick_y = (s8) (stick.y * 128);
-    else if (pad->stick_y == 0)
+    else if (stick.y > 0)
         pad->stick_y = (s8) (stick.y * 127);
 }
 
