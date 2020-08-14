@@ -6,15 +6,15 @@
 #endif
 
 #ifdef TARGET_WII_U
-#include <SDL2/SDL.h>
-
+#include <whb/gfx.h>
 #include <whb/log_cafe.h>
 #include <whb/log_udp.h>
 #include <whb/log.h>
-#include <whb/proc.h>
 #include <whb/crash.h>
 
+#include <coreinit/exit.h>
 #include <proc_ui/procui.h>
+#include <sndcore2/core.h>
 #endif
 
 #include "sm64.h"
@@ -178,7 +178,7 @@ void main_func(void) {
 
     WHBLogPrint("Main pool and configfile initialized.");
     rendering_api = &gfx_whb_api;
-    wm_api = &gfx_sdl;
+    wm_api = &gfx_whb_window;
 	configFullscreen = true;
 #elif defined(ENABLE_DX12)
     rendering_api = &gfx_direct3d12_api;
@@ -248,7 +248,7 @@ void main_func(void) {
 #else
     inited = 1;
 #ifdef TARGET_WII_U
-    while (WHBProcIsRunning()) {
+    while (wm_api->start_frame()) {
 #else
     while (1) {
 #endif
@@ -257,8 +257,9 @@ void main_func(void) {
 #ifdef TARGET_WII_U
     WHBLogPrint("Quitting.");
 
-    SDL_Quit();
     ProcUIShutdown();
+    AXQuit(); // SDL_Quit crashes
+    WHBGfxShutdown();
 
     whb_free_vbo();
     whb_free();
