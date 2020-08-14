@@ -172,7 +172,7 @@ static void controller_wiiu_read(OSContPad* pad) {
     Vec2D wstick = read_wpad(pad);
 
     Vec2D stick = wstick;
-    if (vstick.x != 0 && vstick.y != 0) {
+    if (vstick.x != 0 || vstick.y != 0) {
         stick = vstick;
     }
 
