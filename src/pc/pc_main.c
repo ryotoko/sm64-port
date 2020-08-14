@@ -11,10 +11,7 @@
 #include <whb/log_udp.h>
 #include <whb/log.h>
 #include <whb/crash.h>
-
-#include <coreinit/exit.h>
 #include <proc_ui/procui.h>
-#include <sndcore2/core.h>
 #endif
 
 #include "sm64.h"
@@ -30,6 +27,7 @@
 #include "gfx/gfx_whb.h"
 #include "gfx/gfx_glx.h"
 #include "gfx/gfx_sdl.h"
+#include "gfx/gfx_whb_window.h"
 
 #include "audio/audio_api.h"
 #include "audio/audio_wasapi.h"
@@ -153,14 +151,6 @@ static void on_fullscreen_changed(bool is_now_fullscreen) {
 }
 
 void main_func(void) {
-#ifdef TARGET_WII_U
-    WHBLogCafeInit();
-    WHBLogUdpInit();
-    WHBLogPrint("Logging initialized.");
-    WHBInitCrashHandler();
-    WHBLogPrint("Exception handler initialized.");
-#endif
-
     static u8 pool[DOUBLE_SIZE_ON_64_BIT(0x165000)] __attribute__ ((aligned(16)));
     main_pool_init(pool, pool + sizeof(pool));
     gEffectsMemoryPool = mem_pool_init(0x4000, MEMORY_POOL_LEFT);
@@ -176,10 +166,9 @@ void main_func(void) {
 #if defined(TARGET_WII_U)
     save_config(); // Mount SD write now
 
-    WHBLogPrint("Main pool and configfile initialized.");
     rendering_api = &gfx_whb_api;
     wm_api = &gfx_whb_window;
-	configFullscreen = true;
+    configFullscreen = true;
 #elif defined(ENABLE_DX12)
     rendering_api = &gfx_direct3d12_api;
     wm_api = &gfx_dxgi_api;
@@ -235,10 +224,6 @@ void main_func(void) {
     audio_init();
     sound_init();
 
-#ifdef TARGET_WII_U
-    WHBLogPrint("Audio and sound initialized.");
-#endif
-
     thread5_game_loop(NULL);
 #ifdef TARGET_WEB
     /*for (int i = 0; i < atoi(argv[1]); i++) {
@@ -248,25 +233,12 @@ void main_func(void) {
 #else
     inited = 1;
 #ifdef TARGET_WII_U
-    while (wm_api->start_frame()) {
+    while (gfx_whb_window_is_running()) {
 #else
     while (1) {
 #endif
         wm_api->main_loop(produce_one_frame);
     }
-#ifdef TARGET_WII_U
-    WHBLogPrint("Quitting.");
-
-    ProcUIShutdown();
-    AXQuit(); // SDL_Quit crashes
-    WHBGfxShutdown();
-
-    whb_free_vbo();
-    whb_free();
-
-    WHBLogCafeDeinit();
-    WHBLogUdpDeinit();
-#endif
 #endif
 }
 
