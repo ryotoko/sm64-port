@@ -1,31 +1,30 @@
 #ifdef TARGET_WII_U
 
+#include <macros.h>
+
 #include <coreinit/foreground.h>
-#include <whb/gfx.h>
-#include <whb/log.h>
 #include <gx2/display.h>
 #include <gx2/event.h>
 #include <gx2/swap.h>
 #include <proc_ui/procui.h>
+#include <sndcore2/core.h>
+
+#include <whb/crash.h>
+#include <whb/gfx.h>
+#include <whb/log.h>
 #include <whb/log_cafe.h>
 #include <whb/log_udp.h>
-#include <macros.h>
-#include <sndcore2/core.h>
 
 #include "gfx_window_manager_api.h"
 #include "gfx_whb.h"
 
-#define GFX_API_NAME "Wii U"
-
-static unsigned int window_width;
-static unsigned int window_height;
 static bool is_running;
 
-void save_callback(void) {
+void gfx_whb_window_proc_ui_save_callback(void) {
     OSSavesDone_ReadyToRelease();
 }
 
-uint32_t exit_callback(UNUSED void* data) {
+uint32_t gfx_whb_window_proc_ui_exit_callback(UNUSED void* data) {
     WHBLogPrint("Exit callback");
     is_running = false;
 
@@ -37,6 +36,35 @@ uint32_t exit_callback(UNUSED void* data) {
 
     WHBLogCafeDeinit();
     WHBLogUdpDeinit();
+
+    return 0;
+}
+
+static void gfx_whb_window_init(UNUSED const char *game_name, UNUSED bool start_in_fullscreen) {
+    ProcUIInit(&gfx_whb_window_proc_ui_save_callback);
+    ProcUIRegisterCallback(PROCUI_CALLBACK_EXIT, &gfx_whb_window_proc_ui_exit_callback, NULL, 0);
+
+    is_running = true;
+
+    WHBLogCafeInit();
+    WHBLogUdpInit();
+    WHBInitCrashHandler();
+
+    WHBGfxInit();
+    GX2SetSwapInterval(2);
+}
+
+static void gfx_whb_window_set_keyboard_callbacks(UNUSED bool (*on_key_down)(int scancode), UNUSED bool (*on_key_up)(int scancode), UNUSED void (*on_all_keys_up)(void)) {
+}
+
+static void gfx_whb_window_set_fullscreen_changed_callback(UNUSED void (*on_fullscreen_changed)(bool is_now_fullscreen)) {
+}
+
+static void gfx_whb_window_set_fullscreen(UNUSED bool enable) {
+}
+
+static void gfx_whb_window_main_loop(void (*run_one_game_iter)(void)) {
+    run_one_game_iter();
 }
 
 static void gfx_whb_window_get_dimensions(uint32_t *width, uint32_t *height) {
@@ -59,65 +87,16 @@ static void gfx_whb_window_get_dimensions(uint32_t *width, uint32_t *height) {
     }
 }
 
-static void gfx_whb_window_init(UNUSED const char *game_name, UNUSED bool start_in_fullscreen) {
-    ProcUIInit(save_callback);
-    ProcUIRegisterCallback(PROCUI_CALLBACK_EXIT, exit_callback, NULL, 0);
-
-    is_running = true;
-
-    WHBGfxInit();
-    GX2SetSwapInterval(2);
-    WHBLogCafeInit();
-    WHBLogUdpInit();
-}
-
-static void
-gfx_whb_window_set_fullscreen_changed_callback(void (*on_fullscreen_changed)(bool is_now_fullscreen)) {
-}
-
-static void gfx_whb_window_set_fullscreen(bool enable) {
-}
-
-static void gfx_whb_window_set_keyboard_callbacks(bool (*on_key_down)(int scancode), bool (*on_key_up)(int scancode), void (*on_all_keys_up)(void)) {
-}
-
-static void gfx_whb_window_main_loop(void (*run_one_game_iter)(void)) {
-    run_one_game_iter();
-}
-
-static void gfx_whb_window_onkeydown(UNUSED int scancode) {
-}
-
-static void gfx_whb_window_onkeyup(UNUSED int scancode) {
-}
-
 static void gfx_whb_window_handle_events(void) {
 }
 
-bool gfx_whb_window_is_running(void) {
+static bool gfx_whb_window_start_frame(void) {
     if (!is_running) {
         return false;
+    } else {
+        GX2WaitForFlip();
+        return true;
     }
-
-    ProcUIStatus status = ProcUIProcessMessages(true);
-
-    switch (status) {
-        case PROCUI_STATUS_EXITING:
-            is_running = false;
-            return false;
-        case PROCUI_STATUS_RELEASE_FOREGROUND:
-            ProcUIDrawDoneRelease();
-            break;
-        case PROCUI_STATUS_IN_BACKGROUND:
-        case PROCUI_STATUS_IN_FOREGROUND:
-            break;
-    }
-    return true;
-}
-
-static bool gfx_whb_window_start_frame(void) {
-    GX2WaitForFlip();
-    return true;
 }
 
 static void gfx_whb_window_swap_buffers_begin(void) {
@@ -132,12 +111,35 @@ static double gfx_whb_window_get_time(void) {
     return 0.0;
 }
 
-struct GfxWindowManagerAPI gfx_whb_window = { gfx_whb_window_init,
+bool whb_window_is_running(void) {
+    if (!is_running) {
+        return false;
+    }
+
+    ProcUIStatus status = ProcUIProcessMessages(true);
+
+    switch (status) {
+        case PROCUI_STATUS_EXITING:
+            ProcUIShutdown();
+            is_running = false;
+            return false;
+        case PROCUI_STATUS_RELEASE_FOREGROUND:
+            ProcUIDrawDoneRelease();
+            break;
+        case PROCUI_STATUS_IN_BACKGROUND:
+        case PROCUI_STATUS_IN_FOREGROUND:
+            break;
+    }
+    return true;
+}
+
+struct GfxWindowManagerAPI gfx_whb_window = {
+    gfx_whb_window_init,
     gfx_whb_window_set_keyboard_callbacks,
-                                        gfx_whb_window_set_fullscreen_changed_callback,
+    gfx_whb_window_set_fullscreen_changed_callback,
     gfx_whb_window_set_fullscreen,
     gfx_whb_window_main_loop,
-                                        gfx_whb_window_get_dimensions,
+    gfx_whb_window_get_dimensions,
     gfx_whb_window_handle_events,
     gfx_whb_window_start_frame,
     gfx_whb_window_swap_buffers_begin,

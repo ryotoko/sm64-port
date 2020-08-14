@@ -6,6 +6,7 @@
 
 extern struct GfxWindowManagerAPI gfx_whb_window;
 extern struct GfxRenderingAPI gfx_whb_api;
+bool whb_window_is_running();
 void whb_free_vbo(void);
 void whb_free(void);
 

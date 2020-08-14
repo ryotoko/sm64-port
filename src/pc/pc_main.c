@@ -5,15 +5,6 @@
 #include <emscripten/html5.h>
 #endif
 
-#ifdef TARGET_WII_U
-#include <whb/gfx.h>
-#include <whb/log_cafe.h>
-#include <whb/log_udp.h>
-#include <whb/log.h>
-#include <whb/crash.h>
-#include <proc_ui/procui.h>
-#endif
-
 #include "sm64.h"
 
 #include "game/memory.h"
@@ -27,7 +18,6 @@
 #include "gfx/gfx_whb.h"
 #include "gfx/gfx_glx.h"
 #include "gfx/gfx_sdl.h"
-#include "gfx/gfx_whb_window.h"
 
 #include "audio/audio_api.h"
 #include "audio/audio_wasapi.h"
@@ -214,13 +204,6 @@ void main_func(void) {
         audio_api = &audio_null;
     }
 
-#ifdef TARGET_WII_U
-    if (audio_api == &audio_sdl)
-    {
-        WHBLogPrint("SDL audio initialized.");
-    }
-#endif
-
     audio_init();
     sound_init();
 
@@ -233,7 +216,7 @@ void main_func(void) {
 #else
     inited = 1;
 #ifdef TARGET_WII_U
-    while (gfx_whb_window_is_running()) {
+    while (whb_window_is_running()) {
 #else
     while (1) {
 #endif
