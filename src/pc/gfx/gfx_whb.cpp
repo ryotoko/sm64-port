@@ -12,9 +12,11 @@
 #endif
 #include <PR/gbi.h>
 
+#include <gx2/event.h>
 #include <gx2/draw.h>
 #include <gx2/mem.h>
 #include <gx2/registers.h>
+#include <gx2/state.h>
 #include <gx2/swap.h>
 
 #include <whb/log.h>
@@ -23,6 +25,7 @@
 #include "shaders_wiiu/shaders_wiiu.h"
 #include "gfx_cc.h"
 #include "gfx_rendering_api.h"
+#include "gfx_whb.h"
 
 struct ShaderProgram {
     uint32_t shader_id;
@@ -454,12 +457,12 @@ static void gfx_whb_set_zmode_decal(bool zmode_decal) {
 }
 
 static void gfx_whb_set_viewport(int x, int y, int width, int height) {
-    GX2SetViewport(x, y, width, height, 0.0f, 1.0f);
+    GX2SetViewport(x, window_height - y - height, width, height, 0.0f, 1.0f);
     current_height = height;
 }
 
 static void gfx_whb_set_scissor(int x, int y, int width, int height) {
-    GX2SetScissor(x, current_height - y - height, width, height);
+    GX2SetScissor(x, window_height - y - height, width, height);
 }
 
 static void gfx_whb_set_use_alpha(bool use_alpha) {
@@ -513,6 +516,8 @@ static void gfx_whb_start_frame(void) {
 }
 
 static void gfx_whb_end_frame(void) {
+    GX2Flush();
+    GX2DrawDone();
     WHBGfxFinishRenderTV();
     GX2CopyColorBufferToScanBuffer(WHBGfxGetTVColourBuffer(), GX2_SCAN_TARGET_DRC);
 }

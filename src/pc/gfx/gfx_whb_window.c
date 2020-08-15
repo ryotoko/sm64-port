@@ -19,6 +19,7 @@
 #include "gfx_whb.h"
 
 static bool is_running;
+uint32_t window_height = 0;
 
 void gfx_whb_window_proc_ui_save_callback(void) {
     OSSavesDone_ReadyToRelease();
@@ -72,17 +73,17 @@ static void gfx_whb_window_get_dimensions(uint32_t *width, uint32_t *height) {
         case GX2_TV_SCAN_MODE_480I:
         case GX2_TV_SCAN_MODE_480P:
             *width = 854;
-            *height = 480;
+            *height = 480; window_height = 480;
             break;
         case GX2_TV_SCAN_MODE_1080I:
         case GX2_TV_SCAN_MODE_1080P:
             *width = 1920;
-            *height = 1080;
+            *height = 1080; window_height = 1080;
             break;
         case GX2_TV_SCAN_MODE_720P:
         default:
             *width = 1280;
-            *height = 720;
+            *height = 720; window_height = 720;
             break;
     }
 }
