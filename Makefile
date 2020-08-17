@@ -23,6 +23,8 @@ TARGET_N64 ?= 0
 TARGET_WEB ?= 0
 # Build for the Wii U
 TARGET_WII_U ?= 1
+# Disable no drawing distance by default
+NODRAWINGDISTANCE ?= 0
 # Compiler to use (ido or gcc)
 COMPILER ?= ido
 
@@ -550,6 +552,12 @@ CFLAGS := $(OPT_FLAGS) $(INCLUDE_CFLAGS) -D_LANGUAGE_C $(VERSION_CFLAGS) $(MATCH
 
 ifeq ($(TARGET_WII_U),0)
   CFLAGS += -march=native
+endif
+
+# Check for no drawing distance option
+ifeq ($(NODRAWINGDISTANCE),1)
+  CC_CHECK += -DNODRAWINGDISTANCE
+  CFLAGS += -DNODRAWINGDISTANCE
 endif
 
 ASFLAGS := -I include -I $(BUILD_DIR) $(VERSION_ASFLAGS)
