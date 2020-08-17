@@ -52,6 +52,8 @@ static void gfx_whb_window_init(UNUSED const char *game_name, UNUSED bool start_
     WHBInitCrashHandler();
 
     WHBGfxInit();
+
+    // Remove this line when using the 60FPS patch
     GX2SetSwapInterval(2);
 }
 
