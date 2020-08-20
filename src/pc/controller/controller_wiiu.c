@@ -176,15 +176,8 @@ static void controller_wiiu_read(OSContPad* pad) {
         stick = vstick;
     }
 
-    if (stick.x < 0)
-        pad->stick_x = (s8) (stick.x * 128);
-    else if (stick.x > 0)
-        pad->stick_x = (s8) (stick.x * 127);
-
-    if (stick.y < 0)
-        pad->stick_y = (s8) (stick.y * 128);
-    else if (stick.y > 0)
-        pad->stick_y = (s8) (stick.y * 127);
+	pad->stick_x = (s8) round(stick.x * 80);
+	pad->stick_y = (s8) round(stick.y * 80);
 }
 
 struct ControllerAPI controller_wiiu = {
