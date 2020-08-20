@@ -35,6 +35,7 @@ struct WiiUKeymap map[] = {
     { A_BUTTON, VB(A) | VB(X), CB(A) | CB(X), PB(A) | PB(X) },
     { START_BUTTON, VB(PLUS), CB(PLUS), PB(PLUS) },
     { Z_TRIG, VB(L) | VB(ZL), CB(L) | CB(ZL), PT(L) | PT(ZL) },
+	{ L_TRIG, VB(MINUS), CB(MINUS), PB(MINUS) },
     { R_TRIG, VB(R) | VB(ZR), CB(R) | CB(ZR), PT(R) | PT(ZR) },
     { U_CBUTTONS, SE(UP) },
     { D_CBUTTONS, SE(DOWN) },
@@ -44,6 +45,10 @@ struct WiiUKeymap map[] = {
 size_t num_buttons = sizeof(map) / sizeof(map[0]);
 KPADStatus last_kpad = {0};
 int kpad_timeout = 10;
+
+// Timeout in frames, 30 = 1 second
+#define DEFAULT_DISCONNECT_TIMEOUT 90
+int disconnect_timeout = DEFAULT_DISCONNECT_TIMEOUT;
 
 static void controller_wiiu_init(void) {
     VPADInit();
@@ -118,9 +123,8 @@ static void read_wpad(OSContPad* pad) {
 
     uint32_t wm = status.hold;
     KPADVec2D stick;
-    bool disconnect = false;
-    if (status.hold & WPAD_BUTTON_MINUS)
-        disconnect = true;
+
+    bool minus_pressed = false;
 
     if (status.extensionType == WPAD_EXT_NUNCHUK || status.extensionType == WPAD_EXT_MPLUS_NUNCHUK) {
         uint32_t ext = status.nunchuck.hold;
@@ -135,6 +139,10 @@ static void read_wpad(OSContPad* pad) {
         if (wm & WPAD_BUTTON_RIGHT) pad->button |= R_CBUTTONS;
         if (ext & WPAD_NUNCHUK_BUTTON_C) pad->button |= R_TRIG;
         if (ext & WPAD_NUNCHUK_BUTTON_Z) pad->button |= Z_TRIG;
+
+        if (status.hold & WPAD_BUTTON_MINUS) {
+            minus_pressed = true;
+        }
     } else if (status.extensionType == WPAD_EXT_CLASSIC || status.extensionType == WPAD_EXT_MPLUS_CLASSIC) {
         uint32_t ext = status.classic.hold;
         stick = status.classic.leftStick;
@@ -147,8 +155,9 @@ static void read_wpad(OSContPad* pad) {
         if (ext & WPAD_CLASSIC_BUTTON_RIGHT) pad->stick_x = 127;
         if (ext & WPAD_CLASSIC_BUTTON_DOWN) pad->stick_y = -128;
         if (ext & WPAD_CLASSIC_BUTTON_UP) pad->stick_y = 127;
+
         if (ext & WPAD_CLASSIC_BUTTON_MINUS) {
-            disconnect = true;
+            minus_pressed = true;
         }
     } else if (status.extensionType == WPAD_EXT_PRO_CONTROLLER) {
         uint32_t ext = status.pro.hold;
@@ -162,13 +171,21 @@ static void read_wpad(OSContPad* pad) {
         if (ext & WPAD_PRO_BUTTON_RIGHT) pad->stick_x = 127;
         if (ext & WPAD_PRO_BUTTON_DOWN) pad->stick_y = -128;
         if (ext & WPAD_PRO_BUTTON_UP) pad->stick_y = 127;
+
         if (ext & WPAD_PRO_BUTTON_MINUS) {
-            disconnect = true;
+            minus_pressed = true;
         }
     }
 
-    if (disconnect) {
-        WPADDisconnect(WPAD_CHAN_0);
+    if (minus_pressed) {
+        if (disconnect_timeout == 0) {
+            WPADDisconnect(WPAD_CHAN_0);
+            disconnect_timeout = DEFAULT_DISCONNECT_TIMEOUT;
+            return;
+        }
+        disconnect_timeout--;
+    } else {
+        disconnect_timeout = DEFAULT_DISCONNECT_TIMEOUT;
     }
 
     // If we didn't already get stick input from the gamepad
