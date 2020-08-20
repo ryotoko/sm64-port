@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
+#include <string.h>
 
 #include <ultra64.h>
 
@@ -12,13 +13,6 @@
 
 #include "controller_api.h"
 #include "../configfile.h"
-
-uint32_t vpad_jump_buttons = VPAD_BUTTON_B | VPAD_BUTTON_A;
-uint32_t classic_jump_buttons = WPAD_CLASSIC_BUTTON_B | WPAD_CLASSIC_BUTTON_A;
-uint32_t pro_jump_buttons = WPAD_PRO_BUTTON_B | WPAD_PRO_BUTTON_A;
-uint32_t vpad_punch_buttons = VPAD_BUTTON_Y | VPAD_BUTTON_X;
-uint32_t classic_punch_buttons = WPAD_CLASSIC_BUTTON_Y | WPAD_CLASSIC_BUTTON_X;
-uint32_t pro_punch_buttons = WPAD_PRO_BUTTON_Y | WPAD_PRO_BUTTON_X;
 
 struct WiiUKeymap {
     uint32_t n64Button;
@@ -52,6 +46,8 @@ struct WiiUKeymap map[] = {
     { R_CBUTTONS, SE(RIGHT) }
 };
 size_t num_buttons = sizeof(map) / sizeof(map[0]);
+KPADStatus last_kpad = {0};
+int kpad_timeout = 10;
 
 static void controller_wiiu_init(void) {
     VPADInit();
@@ -104,8 +100,19 @@ static Vec2D read_wpad(OSContPad* pad) {
     KPADStatus status;
     int err;
     int read = KPADReadEx(WPAD_CHAN_0, &status, 1, &err);
-    if (read == 0)
-        return (Vec2D) { 0, 0 };
+    if (read == 0) {
+		kpad_timeout--;
+
+		if (kpad_timeout == 0) {
+            WPADDisconnect(WPAD_CHAN_0);
+			memset(&last_kpad, 0, sizeof(KPADStatus));
+			return (Vec2D) { 0, 0 };
+		}
+		status = last_kpad;
+	} else {
+		kpad_timeout = 10;
+		last_kpad = status;
+	}
 
     uint32_t wm = status.hold;
     KPADVec2D stick;
