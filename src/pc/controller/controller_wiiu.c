@@ -21,10 +21,6 @@ struct WiiUKeymap {
     uint32_t proButton;
 };
 
-typedef struct Vec2D {
-    float x, y;
-} Vec2D;
-
 // Button shortcuts
 #define VB(btn) VPAD_BUTTON_##btn
 #define CB(btn) WPAD_CLASSIC_BUTTON_##btn
@@ -61,7 +57,7 @@ static void controller_wiiu_init(void) {
     }
 }
 
-static Vec2D read_vpad(OSContPad *pad) {
+static void read_vpad(OSContPad *pad) {
     VPADStatus status;
     VPADReadError err;
     uint32_t v;
@@ -69,7 +65,7 @@ static Vec2D read_vpad(OSContPad *pad) {
     VPADRead(VPAD_CHAN_0, &status, 1, &err);
 
     if (err != 0)
-        return (Vec2D) { 0, 0 };
+        return;
 
     v = status.hold;
 
@@ -84,35 +80,41 @@ static Vec2D read_vpad(OSContPad *pad) {
     if (v & VPAD_BUTTON_DOWN) pad->stick_y = -128;
     if (v & VPAD_BUTTON_UP) pad->stick_y = 127;
 
-    return (Vec2D) { status.leftStick.x, status.leftStick.y };
+    pad->stick_x = (s8) round(status.leftStick.x * 80);
+    pad->stick_y = (s8) round(status.leftStick.y * 80);
 }
 
-static Vec2D read_wpad(OSContPad* pad) {
+static void read_wpad(OSContPad* pad) {
     // Disconnect any extra controllers
+    WPADExtensionType ext;
     for (int i = 1; i < 4; i++) {
-        WPADExtensionType ext;
         int res = WPADProbe(i, &ext);
         if (res == 0) {
             WPADDisconnect(i);
         }
     }
 
+    int res = WPADProbe(WPAD_CHAN_0, &ext);
+    if (res != 0) {
+        return;
+    }
+
     KPADStatus status;
     int err;
     int read = KPADReadEx(WPAD_CHAN_0, &status, 1, &err);
     if (read == 0) {
-		kpad_timeout--;
+        kpad_timeout--;
 
-		if (kpad_timeout == 0) {
+        if (kpad_timeout == 0) {
             WPADDisconnect(WPAD_CHAN_0);
-			memset(&last_kpad, 0, sizeof(KPADStatus));
-			return (Vec2D) { 0, 0 };
-		}
-		status = last_kpad;
-	} else {
-		kpad_timeout = 10;
-		last_kpad = status;
-	}
+            memset(&last_kpad, 0, sizeof(KPADStatus));
+            return;
+        }
+        status = last_kpad;
+    } else {
+        kpad_timeout = 10;
+        last_kpad = status;
+    }
 
     uint32_t wm = status.hold;
     KPADVec2D stick;
@@ -165,26 +167,20 @@ static Vec2D read_wpad(OSContPad* pad) {
         }
     }
 
-    if (disconnect)
+    if (disconnect) {
         WPADDisconnect(WPAD_CHAN_0);
+    }
 
-    return (Vec2D) { stick.x, stick.y };
+    // If we didn't already get stick input from the gamepad
+    if (pad->stick_x == 0 && pad->stick_y == 0) {
+        pad->stick_x = (s8) round(stick.x * 80);
+        pad->stick_y = (s8) round(stick.y * 80);
+    }
 }
 
 static void controller_wiiu_read(OSContPad* pad) {
-    pad->stick_x = 0;
-    pad->stick_y = 0;
-
-    Vec2D vstick = read_vpad(pad);
-    Vec2D wstick = read_wpad(pad);
-
-    Vec2D stick = wstick;
-    if (vstick.x != 0 || vstick.y != 0) {
-        stick = vstick;
-    }
-
-	pad->stick_x = (s8) round(stick.x * 80);
-	pad->stick_y = (s8) round(stick.y * 80);
+    read_vpad(pad);
+    read_wpad(pad);
 }
 
 struct ControllerAPI controller_wiiu = {
