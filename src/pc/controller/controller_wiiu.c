@@ -125,7 +125,7 @@ static void read_wpad(OSContPad* pad) {
     uint32_t wm = status.hold;
     KPADVec2D stick;
 
-    bool gamepadStickNotSet = pad->stick_x == 0 && pad->stick_y == 0
+    bool gamepadStickNotSet = pad->stick_x == 0 && pad->stick_y == 0;
 
     if (status.extensionType == WPAD_EXT_NUNCHUK || status.extensionType == WPAD_EXT_MPLUS_NUNCHUK) {
         uint32_t ext = status.nunchuck.hold;
