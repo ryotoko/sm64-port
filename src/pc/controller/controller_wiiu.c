@@ -35,13 +35,14 @@ struct WiiUKeymap map[] = {
     { A_BUTTON, VB(A) | VB(X), CB(A) | CB(X), PB(A) | PB(X) },
     { START_BUTTON, VB(PLUS), CB(PLUS), PB(PLUS) },
     { Z_TRIG, VB(L) | VB(ZL), CB(L) | CB(ZL), PT(L) | PT(ZL) },
-	{ L_TRIG, VB(MINUS), CB(MINUS), PB(MINUS) },
+    { L_TRIG, VB(MINUS), CB(MINUS), PB(MINUS) },
     { R_TRIG, VB(R) | VB(ZR), CB(R) | CB(ZR), PT(R) | PT(ZR) },
     { U_CBUTTONS, SE(UP) },
     { D_CBUTTONS, SE(DOWN) },
     { L_CBUTTONS, SE(LEFT) },
     { R_CBUTTONS, SE(RIGHT) }
 };
+
 size_t num_buttons = sizeof(map) / sizeof(map[0]);
 KPADStatus last_kpad = {0};
 int kpad_timeout = 10;
@@ -81,8 +82,12 @@ static void read_vpad(OSContPad *pad) {
     if (v & VPAD_BUTTON_DOWN) pad->stick_y = -128;
     if (v & VPAD_BUTTON_UP) pad->stick_y = 127;
 
-    pad->stick_x = (s8) round(status.leftStick.x * 80);
-    pad->stick_y = (s8) round(status.leftStick.y * 80);
+    if (status.leftStick.x != 0) {
+        pad->stick_x = (s8) round(status.leftStick.x * 80);
+    }
+    if (status.leftStick.y != 0) {
+        pad->stick_y = (s8) round(status.leftStick.y * 80);
+    }
 }
 
 static void read_wpad(OSContPad* pad) {
@@ -119,6 +124,8 @@ static void read_wpad(OSContPad* pad) {
 
     uint32_t wm = status.hold;
     KPADVec2D stick;
+
+    bool gamepadStickNotSet = pad->stick_x == 0 && pad->stick_y == 0
 
     if (status.extensionType == WPAD_EXT_NUNCHUK || status.extensionType == WPAD_EXT_MPLUS_NUNCHUK) {
         uint32_t ext = status.nunchuck.hold;
@@ -160,13 +167,20 @@ static void read_wpad(OSContPad* pad) {
     }
 
     // If we didn't already get stick input from the gamepad
-    if (pad->stick_x == 0 && pad->stick_y == 0) {
-        pad->stick_x = (s8) round(stick.x * 80);
-        pad->stick_y = (s8) round(stick.y * 80);
+    if (gamepadStickNotSet) {
+        if (stick.x != 0) {
+            pad->stick_x = (s8) round(stick.x * 80);
+        }
+        if (stick.y != 0) {
+            pad->stick_y = (s8) round(stick.y * 80);
+        }
     }
 }
 
 static void controller_wiiu_read(OSContPad* pad) {
+    pad->stick_x = 0;
+    pad->stick_y = 0;
+
     read_vpad(pad);
     read_wpad(pad);
 }
