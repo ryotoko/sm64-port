@@ -109,10 +109,10 @@ static void initialise_screens()
     C3D_DepthMap(true, -1.0f, 0);
     C3D_DepthTest(false, GPU_LEQUAL, GPU_WRITE_ALL);
     C3D_AlphaTest(true, GPU_GREATER, 0x00);
-
-    gTargetBottom = C3D_RenderTargetCreate(240, 320, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
-    C3D_RenderTargetSetOutput(gTargetBottom, GFX_BOTTOM, GFX_LEFT,
-        DISPLAY_TRANSFER_FLAGS | GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO));
+    //
+    // gTargetBottom = C3D_RenderTargetCreate(240, 320, GPU_RB_RGBA8, GPU_RB_DEPTH24_STENCIL8);
+    // C3D_RenderTargetSetOutput(gTargetBottom, GFX_BOTTOM, GFX_LEFT,
+    //     DISPLAY_TRANSFER_FLAGS | GX_TRANSFER_SCALING(GX_TRANSFER_SCALE_NO));
 }
 
 static void gfx_3ds_init(UNUSED const char *game_name, UNUSED bool start_in_fullscreen)
@@ -135,6 +135,9 @@ static void gfx_3ds_init(UNUSED const char *game_name, UNUSED bool start_in_full
     gfx_3ds_menu_init();
 
     initialise_screens();
+
+    consoleInit(GFX_BOTTOM, NULL);
+
 }
 
 static void gfx_set_keyboard_callbacks(UNUSED bool (*on_key_down)(int scancode), UNUSED bool (*on_key_up)(int scancode), UNUSED void (*on_all_keys_up)(void))
