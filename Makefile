@@ -890,7 +890,22 @@ $(BUILD_DIR)/$(TARGET).objdump: $(ELF)
 
 else
 ifeq ($(TARGET_WII_U),1)
-$(ELF): $(O_FILES) $(MIO0_FILES:.mio0=.o) $(SOUND_OBJ_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES)
+
+###
+
+MINIMAP := src/minimap
+
+MINIMAP_C := $(wildcard $(MINIMAP)/*.c)
+MINIMAP_O := $(foreach file,$(MINIMAP_C),$(BUILD_DIR)/$(file:.c=.o))
+MINIMAP_TEXTURES := $(MINIMAP)/textures
+
+MINIMAP_PNG := $(wildcard $(MINIMAP_TEXTURES)/*.png)
+MINIMAP_DDS := $(foreach file,$(MINIMAP_PNG),$(BUILD_DIR)/$(file:.png=.dds))
+MINIMAP_GTX := $(foreach file,$(MINIMAP_DDS),$(file:.dds=.gtx))
+
+###
+
+$(ELF): $(O_FILES) $(MIO0_FILES:.mio0=.o) $(SOUND_OBJ_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(MINIMAP_GTX)
 	$(LD) -L $(BUILD_DIR) -o $@ $(O_FILES) $(SOUND_OBJ_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(LDFLAGS)
 $(EXE): $(ELF)
 	@cp $< $*.strip.elf
@@ -898,6 +913,13 @@ $(EXE): $(ELF)
 	$(SILENTCMD)elf2rpl $*.strip.elf $@ $(ERROR_FILTER)
 	@rm $*.strip.elf
 	@echo built ... $(notdir $@)
+
+%.gtx: %.dds
+	$(PYTHON) tools/GTX-Extractor-5.3/gtx_extract.py -o $@ $<
+$(BUILD_DIR)/%.dds: %.png
+	convert -format dds -define dds:mipmaps=0 -define dds:compression=a8r8g8b8 $< $@
+
+# end minimap
 else
 $(EXE): $(O_FILES) $(MIO0_FILES:.mio0=.o) $(SOUND_OBJ_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES)
 	$(LD) -L $(BUILD_DIR) -o $@ $(O_FILES) $(SOUND_OBJ_FILES) $(ULTRA_O_FILES) $(GODDARD_O_FILES) $(LDFLAGS)
