@@ -752,6 +752,8 @@ static void gfx_citro3d_draw_triangles_helper(float buf_vbo[], size_t buf_vbo_le
     if (sIsHud)
     {
         C3D_FrameDrawOn(gTargetBottom);
+        Mtx_Identity(&projection);
+        C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &projection);
 
         gfx_citro3d_draw_triangles(buf_vbo, buf_vbo_len, buf_vbo_num_tris);
         return;

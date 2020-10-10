@@ -274,15 +274,9 @@ void render_hud_power_meter(void) {
  * Renders the amount of lives Mario has.
  */
 void render_hud_mario_lives(void) {
-#ifdef TARGET_N3DS
-    print_text(GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(42), HUD_TOP_Y, ","); // 'Mario Head' glyph
-    print_text(GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(58), HUD_TOP_Y, "*"); // 'X' glyph
-    print_text_fmt_int(GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(74), HUD_TOP_Y, "%d", gHudDisplay.lives);
-#else
     print_text(GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(22), HUD_TOP_Y, ","); // 'Mario Head' glyph
     print_text(GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(38), HUD_TOP_Y, "*"); // 'X' glyph
     print_text_fmt_int(GFX_DIMENSIONS_RECT_FROM_LEFT_EDGE(54), HUD_TOP_Y, "%d", gHudDisplay.lives);
-#endif
 }
 
 /**
@@ -298,7 +292,7 @@ void render_hud_coins(void) {
 #define HUD_STARS_X 73
 #else
 #ifdef TARGET_N3DS
-#define HUD_STARS_X 98
+#define HUD_STARS_X 96
 #else
 #define HUD_STARS_X 78
 #endif
@@ -400,7 +394,7 @@ void render_hud_camera_status(void) {
     cameraLUT = segmented_to_virtual(&main_hud_camera_lut);
 
 #ifdef TARGET_N3DS
-    x = GFX_DIMENSIONS_RECT_FROM_RIGHT_EDGE(74);
+    x = 284;
     y = 215;
 #else
     x = GFX_DIMENSIONS_RECT_FROM_RIGHT_EDGE(54);
@@ -450,9 +444,13 @@ void render_hud(void) {
     hudDisplayFlags = gHudDisplay.flags;
 
     if (hudDisplayFlags == HUD_DISPLAY_NONE) {
+#ifndef TARGET_N3DS
         sPowerMeterHUD.animation = POWER_METER_HIDDEN;
         sPowerMeterStoredHealth = 8;
         sPowerMeterVisibleTimer = 0;
+#else
+        return;
+#endif
     } else {
 #ifdef VERSION_EU
         // basically create_dl_ortho_matrix but guOrtho screen width is different
@@ -470,44 +468,106 @@ void render_hud(void) {
         create_dl_ortho_matrix();
 #endif
 
+#ifndef TARGET_N3DS
         if (gCurrentArea != NULL && gCurrentArea->camera->mode == CAMERA_MODE_INSIDE_CANNON) {
             render_hud_cannon_reticle();
         }
-// #ifdef TARGET_N3DS
-//         gDPForceFlush(gDisplayListHead++);
-//         gDPSetHud(gDisplayListHead++, 1); // enable hud mode
-// #endif
+#endif
+
         if (hudDisplayFlags & HUD_DISPLAY_FLAG_LIVES) {
+#ifndef TARGET_N3DS
             render_hud_mario_lives();
+#else
+            render_hud_mario_lives_bot();
+#endif
         }
 
         if (hudDisplayFlags & HUD_DISPLAY_FLAG_COIN_COUNT) {
+#ifndef TARGET_N3DS
             render_hud_coins();
+#else
+            render_hud_coins_bot();
+#endif
         }
 
         if (hudDisplayFlags & HUD_DISPLAY_FLAG_STAR_COUNT) {
+#ifndef TARGET_N3DS
             render_hud_stars();
+#else
+            render_hud_stars_bot();
+#endif
         }
 
         if (hudDisplayFlags & HUD_DISPLAY_FLAG_KEYS) {
-            render_hud_keys();
+            render_hud_keys(); // L is real
         }
 
         if (hudDisplayFlags & HUD_DISPLAY_FLAG_CAMERA_AND_POWER) {
-// #ifdef TARGET_N3DS
-//             gDPForceFlush(gDisplayListHead++);
-//             gDPSetHud(gDisplayListHead++, 0);
-// #endif
+#ifndef TARGET_N3DS        
             render_hud_power_meter();
-// #ifdef TARGET_N3DS
-//             gDPForceFlush(gDisplayListHead++);
-//             gDPSetHud(gDisplayListHead++, 1);
-// #endif
+#endif
             render_hud_camera_status();
         }
 
         if (hudDisplayFlags & HUD_DISPLAY_FLAG_TIMER) {
             render_hud_timer();
         }
+#ifdef TARGET_N3DS
+        render_hud_elements();
+#endif
     }
 }
+
+#ifdef TARGET_N3DS
+void render_power_meter(void) {
+    s16 hudDisplayFlags;
+
+    hudDisplayFlags = gHudDisplay.flags;
+
+    if (hudDisplayFlags == HUD_DISPLAY_NONE) {
+        sPowerMeterHUD.animation = POWER_METER_HIDDEN;
+        sPowerMeterStoredHealth = 8;
+        sPowerMeterVisibleTimer = 0;
+    }
+    else {
+        create_dl_ortho_matrix();
+        if (gCurrentArea != NULL && gCurrentArea->camera->mode == CAMERA_MODE_INSIDE_CANNON) {
+            render_hud_cannon_reticle();
+        }
+        if (hudDisplayFlags & HUD_DISPLAY_FLAG_CAMERA_AND_POWER) {
+            render_hud_power_meter();
+        }
+    }
+}
+
+void render_hud_mario_lives_bot(void) {
+    print_text_bot(4, HUD_TOP_Y, ","); // 'Mario Head' glyph
+    print_text_bot(20, HUD_TOP_Y, "*"); // 'X' glyph
+    print_text_fmt_int_bot(36, HUD_TOP_Y, "%d", gHudDisplay.lives);
+}
+
+void render_hud_coins_bot(void) {
+    print_text_bot(140, HUD_TOP_Y, "+"); // 'Coin' glyph
+    print_text_bot(156, HUD_TOP_Y, "*"); // 'X' glyph
+    print_text_fmt_int_bot(170, HUD_TOP_Y, "%d", gHudDisplay.coins);
+}
+
+void render_hud_stars_bot(void) {
+    s8 showX = 0;
+
+    if (gHudFlash == 1 && gGlobalTimer & 0x08) {
+        return;
+    }
+
+    if (gHudDisplay.stars < 100) {
+        showX = 1;
+    }
+
+    print_text_bot(258, HUD_TOP_Y, "-"); // 'Star' glyph
+    if (showX == 1) {
+        print_text_bot(274, HUD_TOP_Y, "*"); // 'X' glyph
+    }
+    print_text_fmt_int_bot((showX * 14) + 274,
+                       HUD_TOP_Y, "%d", gHudDisplay.stars);
+}
+#endif

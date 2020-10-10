@@ -26,9 +26,11 @@ struct TextLabel {
 struct TextLabel *sTextLabels[52];
 s16 sTextLabelsCount = 0;
 
-#ifdef ENABLE_N3DS_3D_MODE
+#ifdef TARGET_N3DS
 struct TextLabel *sPressStart[52]; // separates "press start" text from render_text_labels general
 s16 sPressStartCount = 0;
+struct TextLabel *sHudElement[52]; // separates hud elements from render_text_labels general
+s16 sHudElementCount = 0;
 #endif
 
 /**
@@ -255,6 +257,90 @@ void print_text(s32 x, s32 y, const char *str) {
     sTextLabelsCount++;
 }
 
+#ifdef TARGET_N3DS
+/**
+ * Copies of print_text_fmt_int and print_text for rendering HUD to bottom screen
+ */
+void print_text_fmt_int_bot(s32 x, s32 y, const char *str, s32 n) {
+    char c = 0;
+    s8 zeroPad = FALSE;
+    u8 width = 0;
+    s32 base = 0;
+    s32 len = 0;
+    s32 srcIndex = 0;
+
+    // Don't continue if there is no memory to do so.
+    if ((sHudElement[sHudElementCount] = mem_pool_alloc(gEffectsMemoryPool,
+                                                        sizeof(struct TextLabel))) == NULL) {
+        return;
+    }
+
+    sHudElement[sHudElementCount]->x = x;
+    sHudElement[sHudElementCount]->y = y;
+
+    c = str[srcIndex];
+
+    while (c != 0) {
+        if (c == '%') {
+            srcIndex++;
+
+            parse_width_field(str, &srcIndex, &width, &zeroPad);
+
+            if (str[srcIndex] != 'd' && str[srcIndex] != 'x') {
+                break;
+            }
+            if (str[srcIndex] == 'd') {
+                base = 10;
+            }
+            if (str[srcIndex] == 'x') {
+                base = 16;
+            }
+
+            srcIndex++;
+
+            format_integer(n, base, sHudElement[sHudElementCount]->buffer + len, &len, width, zeroPad);
+        } else // straight copy
+        {
+            sHudElement[sHudElementCount]->buffer[len] = c;
+            len++;
+            srcIndex++;
+        }
+        c = str[srcIndex];
+    }
+
+    sHudElement[sHudElementCount]->length = len;
+    sHudElementCount++;
+}
+
+void print_text_bot(s32 x, s32 y, const char *str) {
+    char c = 0;
+    s32 length = 0;
+    s32 srcIndex = 0;
+
+    // Don't continue if there is no memory to do so.
+    if ((sHudElement[sHudElementCount] = mem_pool_alloc(gEffectsMemoryPool,
+                                                        sizeof(struct TextLabel))) == NULL) {
+        return;
+    }
+
+    sHudElement[sHudElementCount]->x = x;
+    sHudElement[sHudElementCount]->y = y;
+
+    c = str[srcIndex];
+
+    // Set the array with the text to print while finding length.
+    while (c != 0) {
+        sHudElement[sHudElementCount]->buffer[length] = c;
+        length++;
+        srcIndex++;
+        c = str[srcIndex];
+    }
+
+    sHudElement[sHudElementCount]->length = length;
+    sHudElementCount++;
+}
+#endif
+
 /**
  * Prints text in the colorful lettering centered at given X, Y coordinates.
  */
@@ -287,7 +373,7 @@ void print_text_centered(s32 x, s32 y, const char *str) {
     sTextLabelsCount++;
 }
 
-#ifdef ENABLE_N3DS_3D_MODE
+#ifdef TARGET_N3DS
 /** Separate function for "PRESS START" text, basically a copy of print_text_centered **/
 void print_press_start(s32 x, s32 y, const char *str) {
     char c = 0;
@@ -494,7 +580,7 @@ void render_text_labels(void) {
     sTextLabelsCount = 0;
 }
 
-#ifdef ENABLE_N3DS_3D_MODE
+#ifdef TARGET_N3DS
 /** Renders "press start", basically a copy of render_text_labels **/
 void render_press_start(void) {
 
@@ -534,5 +620,63 @@ void render_press_start(void) {
     
     gSPDisplayList(gDisplayListHead++, dl_hud_img_end);
     sPressStartCount = 0;
+}
+
+/**
+ * Copy of render_text_labels for rendering HUD elements.
+ */
+void render_hud_elements(void) {
+    s32 i;
+    s32 j;
+    s8 glyphIndex;
+    Mtx *mtx;
+
+    if (sHudElementCount == 0) {
+        return;
+    }
+
+    mtx = alloc_display_list(sizeof(*mtx));
+
+    if (mtx == NULL) {
+        sHudElementCount = 0;
+        return;
+    }
+
+    guOrtho(mtx, 0.0f, SCREEN_WIDTH, 0.0f, SCREEN_HEIGHT, -10.0f, 10.0f, 1.0f);
+    gSPPerspNormalize((Gfx *) (gDisplayListHead++), 0xFFFF);
+    gSPMatrix(gDisplayListHead++, VIRTUAL_TO_PHYSICAL(mtx), G_MTX_PROJECTION | G_MTX_LOAD | G_MTX_NOPUSH);
+    gSPDisplayList(gDisplayListHead++, dl_hud_img_begin);
+
+    for (i = 0; i < sHudElementCount; i++) {
+        for (j = 0; j < sHudElement[i]->length; j++) {
+            glyphIndex = char_to_glyph_index(sHudElement[i]->buffer[j]);
+
+            if (glyphIndex != GLYPH_SPACE) {
+#ifdef VERSION_EU
+                // Beta Key was removed by EU, so glyph slot reused.
+                // This produces a colorful Ü.
+                if (glyphIndex == GLYPH_BETA_KEY) {
+                    add_glyph_texture(GLYPH_U);
+                    render_textrect(sHudElement[i]->x, sHudElement[i]->y, j);
+
+                    add_glyph_texture(GLYPH_UMLAUT);
+                    render_textrect(sHudElement[i]->x, sHudElement[i]->y + 3, j);
+                } else {
+                    add_glyph_texture(glyphIndex);
+                    render_textrect(sHudElement[i]->x, sHudElement[i]->y, j);
+                }
+#else
+                add_glyph_texture(glyphIndex);
+                render_textrect(sHudElement[i]->x, sHudElement[i]->y, j);
+#endif
+            }
+        }
+
+        mem_pool_free(gEffectsMemoryPool, sHudElement[i]);
+    }
+
+    gSPDisplayList(gDisplayListHead++, dl_hud_img_end);
+
+    sHudElementCount = 0;
 }
 #endif

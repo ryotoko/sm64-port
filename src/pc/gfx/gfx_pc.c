@@ -1605,20 +1605,18 @@ static void gfx_run_dl(Gfx* cmd) {
             case G_SETCIMG:
                 gfx_dp_set_color_image(C0(21, 3), C0(19, 2), C0(0, 11), seg_addr(cmd->words.w1));
                 break;
-#ifdef ENABLE_N3DS_3D_MODE
+#ifdef TARGET_N3DS
             case G_SPECIAL_1:
                 gfx_set_2d(cmd->words.w1);
                 break;
             case G_SPECIAL_2:
                 gfx_flush();
                 break;
-            case G_SPECIAL_4:
-                gfx_set_iod(cmd->words.w1);
-                break;
-#endif
-#ifdef TARGET_N3DS
             case G_SPECIAL_3:
                 gfx_set_is_hud(cmd->words.w1 == 1);
+                break;
+            case G_SPECIAL_4:
+                gfx_set_iod(cmd->words.w1);
                 break;
 #endif
         }

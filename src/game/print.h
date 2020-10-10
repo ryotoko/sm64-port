@@ -32,6 +32,9 @@ void render_text_labels(void);
 #ifdef ENABLE_N3DS_3D_MODE
 void print_press_start(s32 x, s32 y, const char *str);
 void render_press_start(void);
+void render_hud_elements(void);
+void print_text_fmt_int_bot(s32 x, s32 y, const char *str, s32 n);
+void print_text_bot(s32 x, s32 y, const char *str);
 #endif
 
 #endif // PRINT_H

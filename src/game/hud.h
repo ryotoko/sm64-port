@@ -24,5 +24,8 @@ enum CameraHUDLut {
 // Functions
 void set_hud_camera_status(s16 status);
 void render_hud(void);
+#ifdef TARGET_N3DS
+void render_power_meter(void);
+#endif
 
 #endif // HUD_H
