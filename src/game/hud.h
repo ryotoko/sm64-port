@@ -26,6 +26,9 @@ void set_hud_camera_status(s16 status);
 void render_hud(void);
 #ifdef TARGET_N3DS
 void render_power_meter(void);
+void render_hud_mario_lives_bot(void);
+void render_hud_coins_bot(void);
+void render_hud_stars_bot(void);
 #endif
 
 #endif // HUD_H

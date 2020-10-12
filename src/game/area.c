@@ -121,7 +121,7 @@ void print_intro_text(void) {
 #ifdef VERSION_EU
             print_text(20, 20, "START");
 #else
-#ifdef ENABLE_N3DS_3D_MODE
+#ifdef TARGET_N3DS
             print_press_start(20, 38, "PRESS");
             print_press_start(20, 20, "START");
 #else
@@ -131,6 +131,10 @@ void print_intro_text(void) {
 #endif
         }
     }
+#ifdef TARGET_N3DS
+    else
+        print_press_start(-16, 38, "A                                                                  A"); // goddard bug hack
+#endif
 }
 
 u32 get_mario_spawn_type(struct Object *o) {
@@ -417,6 +421,7 @@ void render_game(void) {
 #ifdef TARGET_N3DS
         gDPForceFlush(gDisplayListHead++); // flush dialog/menus
         gDPSet2d(gDisplayListHead++, 0); // reset 2D mode
+        gDPForceFlush(gDisplayListHead++);
 #endif
 
         if (gPauseScreenMode != 0) {
@@ -456,6 +461,7 @@ void render_game(void) {
 #ifdef TARGET_N3DS
         gDPForceFlush(gDisplayListHead++); // flush text labels
         gDPSet2d(gDisplayListHead++, 0); // reset 2D mode
+        gDPForceFlush(gDisplayListHead++);
 #endif
 
         if (D_8032CE78 != 0) {

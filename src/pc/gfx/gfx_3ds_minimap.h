@@ -36,6 +36,6 @@ static const vertex vertex_list_arrow[] =
 };
 
 void gfx_3ds_init_minimap();
-uint32_t gfx_3ds_draw_minimap(float *vertex_buffer, int vertex_offset);
+void gfx_3ds_draw_minimap();
 
 #endif

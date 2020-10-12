@@ -291,11 +291,7 @@ void render_hud_coins(void) {
 #ifdef VERSION_JP
 #define HUD_STARS_X 73
 #else
-#ifdef TARGET_N3DS
-#define HUD_STARS_X 96
-#else
 #define HUD_STARS_X 78
-#endif
 #endif
 
 /**
@@ -547,9 +543,9 @@ void render_hud_mario_lives_bot(void) {
 }
 
 void render_hud_coins_bot(void) {
-    print_text_bot(140, HUD_TOP_Y, "+"); // 'Coin' glyph
-    print_text_bot(156, HUD_TOP_Y, "*"); // 'X' glyph
-    print_text_fmt_int_bot(170, HUD_TOP_Y, "%d", gHudDisplay.coins);
+    print_text_bot(136, HUD_TOP_Y, "+"); // 'Coin' glyph
+    print_text_bot(152, HUD_TOP_Y, "*"); // 'X' glyph
+    print_text_fmt_int_bot(166, HUD_TOP_Y, "%d", gHudDisplay.coins);
 }
 
 void render_hud_stars_bot(void) {
@@ -563,11 +559,19 @@ void render_hud_stars_bot(void) {
         showX = 1;
     }
 
-    print_text_bot(258, HUD_TOP_Y, "-"); // 'Star' glyph
-    if (showX == 1) {
-        print_text_bot(274, HUD_TOP_Y, "*"); // 'X' glyph
-    }
-    print_text_fmt_int_bot((showX * 14) + 274,
+    if (gHudDisplay.stars < 10) {
+        print_text_bot(271, HUD_TOP_Y, "-"); // 'Star' glyph
+        print_text_bot(287, HUD_TOP_Y, "*"); // 'X' glyph
+        print_text_fmt_int_bot((showX * 14) + 287,
                        HUD_TOP_Y, "%d", gHudDisplay.stars);
+    }
+    else {
+        print_text_bot(258, HUD_TOP_Y, "-"); // 'Star' glyph
+        if (showX == 1) {
+            print_text_bot(274, HUD_TOP_Y, "*"); // 'X' glyph
+        }
+        print_text_fmt_int_bot((showX * 14) + 274,
+                        HUD_TOP_Y, "%d", gHudDisplay.stars);
+    }
 }
 #endif

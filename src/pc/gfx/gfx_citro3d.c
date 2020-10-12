@@ -64,7 +64,6 @@ static int sBufIdx = 0;
 static bool sDepthTestOn = false;
 static bool sDepthUpdateOn = true;
 static bool sDepthDecal = false;
-static bool sUseBlend = false;
 
 // calling FrameDrawOn resets viewport
 static int viewport_x, viewport_y;
@@ -78,7 +77,8 @@ static C3D_Mtx modelView, projection;
 
 static bool sIsHud;
 
-#ifdef ENABLE_N3DS_3D_MODE
+static void gfx_citro3d_immediate_draw(float buf_vbo[], size_t buf_vbo_num_tris);
+
 static int sOrigBufIdx;
 static int s2DMode;
 float iodZ = 8.0f;
@@ -141,7 +141,6 @@ void gfx_citro3d_set_iod(float z, float w)
     iodZ = z;
     iodW = w;
 }
-#endif
 
 static void gfx_citro3d_is_hud(bool is_hud)
 {
@@ -199,6 +198,7 @@ static void update_tex_env(struct ShaderProgram *prg, bool swap_input)
 
     C3D_TexEnvInit(&prg->texenv0);
     C3D_TexEnvColor(&prg->texenv0, 0);
+
     if (prg->cc_features.opt_alpha && !prg->cc_features.color_alpha_same)
     {
         // RGB first
@@ -288,6 +288,7 @@ static void update_tex_env(struct ShaderProgram *prg, bool swap_input)
                 prg->cc_features.c[0][2] == SHADER_TEXEL0A ? GPU_TEVOP_RGB_SRC_ALPHA : GPU_TEVOP_RGB_SRC_COLOR);
         }
     }
+
     if (!prg->cc_features.opt_alpha)
     {
         C3D_TexEnvColor(&prg->texenv0, 0xFF000000);
@@ -326,10 +327,7 @@ static void update_shader(bool swap_input)
         C3D_FogGasMode(GPU_NO_FOG, GPU_PLAIN_DENSITY, false);
     }
 
-    if (prg->cc_features.opt_texture_edge && prg->cc_features.opt_alpha)
-        C3D_AlphaTest(true, GPU_GREATER, 77);
-    else
-        C3D_AlphaTest(true, GPU_GREATER, 0);
+    C3D_AlphaTest(true, GPU_GREATER, 77);
 }
 
 static void gfx_citro3d_load_shader(struct ShaderProgram *new_prg)
@@ -570,18 +568,9 @@ static void gfx_citro3d_set_scissor(int x, int y, int width, int height)
     }
 }
 
-static void applyBlend()
-{
-    if (sUseBlend)
-        C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA);
-    else
-        C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_ONE, GPU_ZERO, GPU_ONE, GPU_ZERO);
-}
-
 static void gfx_citro3d_set_use_alpha(bool use_alpha)
 {
-    sUseBlend = use_alpha;
-    applyBlend();
+    C3D_AlphaBlend(GPU_BLEND_ADD, GPU_BLEND_ADD, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA, GPU_SRC_ALPHA, GPU_ONE_MINUS_SRC_ALPHA);
 }
 
 static u32 vec4ToU32Color(float r, float g, float b, float a)
@@ -747,6 +736,124 @@ void gfx_citro3d_frame_draw_on(C3D_RenderTarget* target)
         C3D_SetScissor(GPU_SCISSOR_NORMAL, scissor_y, scissor_x, scissor_height, scissor_width);
 }
 
+static void gfx_citro3d_immediate_draw(float buf_vbo[], size_t buf_vbo_num_tris)
+{
+    if (sShaderProgramPool[sCurShader].cc_features.num_inputs > 1) // embedded renderTwo variant -- *probably* not needed for the HUD
+    {
+        int offset = 0;
+        bool hasTex = sShaderProgramPool[sCurShader].cc_features.used_textures[0] || sShaderProgramPool[sCurShader].cc_features.used_textures[1];
+        bool hasColor = sShaderProgramPool[sCurShader].cc_features.num_inputs > 0;
+        bool hasAlpha = sShaderProgramPool[sCurShader].cc_features.opt_alpha;
+        if (sShaderProgramPool[sCurShader].cc_features.opt_fog)
+            C3D_TexEnvColor(C3D_GetTexEnv(2), vec4ToU32Color(buf_vbo[hasTex ? 6 : 4], buf_vbo[hasTex ? 7 : 5], buf_vbo[hasTex ? 8 : 6], buf_vbo[hasTex ? 9 : 7]));
+        u32 firstColor0, firstColor1;
+        bool color0Constant = true;
+        bool color1Constant = true;
+        //determine which color is constant over all vertices
+        for (u32 i = 0; i < buf_vbo_num_tris * 3 && color0Constant && color1Constant; i++)
+        {
+            int vtxOffs = 4;
+            if (hasTex)
+                vtxOffs += 2;
+            u32 color0 = vec4ToU32Color(
+                buf_vbo[offset + vtxOffs],
+                buf_vbo[offset + vtxOffs + 1],
+                buf_vbo[offset + vtxOffs + 2],
+                hasAlpha ? buf_vbo[offset + vtxOffs + 3] : 1.0f);
+            vtxOffs += hasAlpha ? 4 : 3;
+            u32 color1 = vec4ToU32Color(
+                buf_vbo[offset + vtxOffs],
+                buf_vbo[offset + vtxOffs + 1],
+                buf_vbo[offset + vtxOffs + 2],
+                hasAlpha ? buf_vbo[offset + vtxOffs + 3] : 1.0f);
+            if (i == 0)
+            {
+                firstColor0 = color0;
+                firstColor1 = color1;
+            }
+            else
+            {
+                if (firstColor0 != color0)
+                    color0Constant = false;
+                if (firstColor1 != color1)
+                    color1Constant = false;
+            }
+            offset += sVtxUnitSize;
+        }
+        offset = 0;
+        update_shader(!color1Constant);
+        C3D_TexEnvColor(C3D_GetTexEnv(0), color1Constant ? firstColor1 : firstColor0);
+
+        C3D_ImmDrawBegin(GPU_TRIANGLES);
+
+        for (u32 i = 0; i < 3 * buf_vbo_num_tris; i++)
+        {
+            C3D_ImmSendAttrib(buf_vbo[offset + 0], buf_vbo[offset + 1], buf_vbo[offset + 2], buf_vbo[offset + 3]);
+
+            int vtxOffs = 4;
+            if (hasTex)
+            {
+                C3D_ImmSendAttrib(buf_vbo[offset + vtxOffs] * sTexturePoolScaleS[sCurTex], 1 - buf_vbo[offset + vtxOffs + 1] * sTexturePoolScaleT[sCurTex], 0.0f, 0.0f);
+                vtxOffs += 2;
+            }
+            else
+            {
+                C3D_ImmSendAttrib(0.0f, 0.0f, 0.0f, 0.0f);
+            }
+            if (color0Constant)
+                vtxOffs += hasAlpha ? 4 : 3;
+            if (hasColor)
+            {
+                C3D_ImmSendAttrib(buf_vbo[offset + vtxOffs], buf_vbo[offset + vtxOffs + 1], buf_vbo[offset + vtxOffs + 2], hasAlpha ? buf_vbo[offset + vtxOffs + 3] : 1.0f);
+            }
+            else
+            {
+                C3D_ImmSendAttrib(1.0f, 1.0f, 1.0f, 1.0f);
+            }
+
+            offset += sVtxUnitSize;
+        }
+
+        C3D_ImmDrawEnd();
+        return;
+    }
+
+    int offset = 0;
+    bool hasTex = sShaderProgramPool[sCurShader].cc_features.used_textures[0] || sShaderProgramPool[sCurShader].cc_features.used_textures[1];
+    bool hasColor = sShaderProgramPool[sCurShader].cc_features.num_inputs > 0;
+    bool hasAlpha = sShaderProgramPool[sCurShader].cc_features.opt_alpha;
+
+    C3D_ImmDrawBegin(GPU_TRIANGLES);
+
+    for (u32 i = 0; i < 3 * buf_vbo_num_tris; i++)
+    {
+        C3D_ImmSendAttrib(buf_vbo[offset + 0], buf_vbo[offset + 1], buf_vbo[offset + 2], buf_vbo[offset + 3]);
+
+        int vtxOffs = 4;
+        if (hasTex)
+        {
+            C3D_ImmSendAttrib(buf_vbo[offset + vtxOffs] * sTexturePoolScaleS[sCurTex], 1 - buf_vbo[offset + vtxOffs + 1] * sTexturePoolScaleT[sCurTex], 0.0f, 0.0f);
+            vtxOffs += 2;
+        }
+        else
+        {
+            C3D_ImmSendAttrib(0.0f, 0.0f, 0.0f, 0.0f);
+        }
+        if (hasColor)
+        {
+            C3D_ImmSendAttrib(buf_vbo[offset + vtxOffs], buf_vbo[offset + vtxOffs + 1], buf_vbo[offset + vtxOffs + 2], hasAlpha ? buf_vbo[offset + vtxOffs + 3] : 1.0f);
+        }
+        else
+        {
+            C3D_ImmSendAttrib(1.0f, 1.0f, 1.0f, 1.0f);
+        }
+
+        offset += sVtxUnitSize;
+    }
+
+    C3D_ImmDrawEnd();
+}
+
 static void gfx_citro3d_draw_triangles_helper(float buf_vbo[], size_t buf_vbo_len, size_t buf_vbo_num_tris)
 {
     if (sIsHud)
@@ -755,10 +862,10 @@ static void gfx_citro3d_draw_triangles_helper(float buf_vbo[], size_t buf_vbo_le
         Mtx_Identity(&projection);
         C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &projection);
 
-        gfx_citro3d_draw_triangles(buf_vbo, buf_vbo_len, buf_vbo_num_tris);
+        gfx_citro3d_immediate_draw(buf_vbo, buf_vbo_num_tris);
         return;
     }
-#ifdef ENABLE_N3DS_3D_MODE
+
     if ((gGfx3DSMode == GFX_3DS_MODE_NORMAL || gGfx3DSMode == GFX_3DS_MODE_AA_22) && gSliderLevel > 0.0f)
     {
         // left screen
@@ -772,11 +879,12 @@ static void gfx_citro3d_draw_triangles_helper(float buf_vbo[], size_t buf_vbo_le
         stereoTilt(&projection, iodZ, iodW);
         gfx_citro3d_frame_draw_on(gTargetRight);
         gfx_citro3d_draw_triangles(buf_vbo, buf_vbo_len, buf_vbo_num_tris);
-        return;
     }
-#endif
-    gfx_citro3d_frame_draw_on(gTarget);
-    gfx_citro3d_draw_triangles(buf_vbo, buf_vbo_len, buf_vbo_num_tris);
+    else 
+    {
+        gfx_citro3d_frame_draw_on(gTarget);
+        gfx_citro3d_draw_triangles(buf_vbo, buf_vbo_len, buf_vbo_num_tris);
+    }
 }
 
 static void gfx_citro3d_init(void)
@@ -792,9 +900,9 @@ static void gfx_citro3d_init(void)
     // Configure attributes for use with the vertex shader
     C3D_AttrInfo* attrInfo = C3D_GetAttrInfo();
     AttrInfo_Init(attrInfo);
-    AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 4); // v0=position
-    AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 2); // v1=texcoord
-    AttrInfo_AddLoader(attrInfo, 2, GPU_FLOAT, 4); // v2=color
+    AttrInfo_AddLoader(attrInfo, 0, GPU_FLOAT, 4); // v0=position (x,y,z,w)
+    AttrInfo_AddLoader(attrInfo, 1, GPU_FLOAT, 2); // v1=texcoord (s,t,0,0)
+    AttrInfo_AddLoader(attrInfo, 2, GPU_FLOAT, 4); // v2=color    (r,g,b,a)
 
     // Create 1MB VBO (vertex buffer object)
     sVboBuffer = linearAlloc(1 * 1024 * 1024);
@@ -828,17 +936,17 @@ static void gfx_citro3d_start_frame(void)
     }
     C3D_RenderTargetClear(gTarget, C3D_CLEAR_ALL, 0x000000FF, 0xFFFFFFFF);
     C3D_RenderTargetClear(gTargetBottom, C3D_CLEAR_ALL, 0x000000FF, 0xFFFFFFFF);
-#ifdef ENABLE_N3DS_3D_MODE
     if (gGfx3DSMode == GFX_3DS_MODE_NORMAL || gGfx3DSMode == GFX_3DS_MODE_AA_22)
         C3D_RenderTargetClear(gTargetRight, C3D_CLEAR_ALL, 0x000000FF, 0xFFFFFFFF);
-#endif
-
+    
     // bottom screen
     C3D_FrameDrawOn(gTargetBottom);
-    uint32_t tris = gfx_3ds_draw_minimap(sVboBuffer, sBufIdx);
+    gfx_3ds_draw_minimap();
     if (gShowConfigMenu)
-        tris += gfx_3ds_menu_draw(sVboBuffer, sBufIdx + tris, true);
-    sBufIdx += tris;
+        gfx_3ds_menu_draw();
+    
+    // reset texenv0
+    C3D_SetTexEnv(0, &sShaderProgramPool[sCurShader].texenv0); // peach intro fade fix
 
     // reset model
     Mtx_Identity(&modelView);
@@ -859,7 +967,7 @@ static void gfx_citro3d_end_frame(void)
 {
     // set the texenv back
     update_shader(false);
-
+    
     C3D_FrameEnd(0);
 }
 
@@ -930,10 +1038,8 @@ struct GfxRenderingAPI gfx_citro3d_api = {
     gfx_citro3d_set_fog,
     gfx_citro3d_set_fog_color,
     gfx_citro3d_is_hud,
-#ifdef ENABLE_N3DS_3D_MODE
     gfx_citro3d_set_2d,
     gfx_citro3d_set_iod
-#endif
 };
 
 #endif

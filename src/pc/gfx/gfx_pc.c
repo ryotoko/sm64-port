@@ -16,7 +16,7 @@
 #include "gfx_rendering_api.h"
 #include "gfx_screen_config.h"
 
-#ifdef ENABLE_N3DS_3D_MODE
+#ifdef TARGET_N3DS
 #include "gfx_3ds.h"
 #endif
 
@@ -164,9 +164,7 @@ static void gfx_set_is_hud(bool is_hud)
     n64_native_res = is_hud;
     gfx_rapi->set_is_hud(is_hud);
 }
-#endif
 
-#ifdef ENABLE_N3DS_3D_MODE
 static void gfx_set_2d(int mode_2d)
 {
     gfx_rapi->set_2d(mode_2d);
@@ -696,7 +694,7 @@ static void gfx_sp_vertex(size_t n_vertices, size_t dest_index, const Vtx *verti
 
         // trivial clip rejection
         d->clip_rej = 0;
-#ifdef ENABLE_N3DS_3D_MODE
+#ifdef TARGET_N3DS
     if ((gGfx3DSMode == GFX_3DS_MODE_NORMAL || gGfx3DSMode == GFX_3DS_MODE_AA_22) && gSliderLevel > 0.0f) {
         float wMod = w * 1.2f; // expanded w-range for testing clip rejection
         if (x < -wMod) d->clip_rej |= 1;

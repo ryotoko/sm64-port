@@ -10,7 +10,6 @@ struct gfx_configuration gfx_config = {true, false}; // AA on, 800px off
 #endif
 
 static C3D_Mtx modelView, projection;
-static int buffer_offset;
 
 static C3D_Tex mode_400_tex, mode_800_tex;
 static C3D_Tex aa_off_tex, aa_on_tex;
@@ -21,8 +20,7 @@ static u8 debounce;
 static int touch_x;
 static int touch_y;
 
-
-static void gfx_3ds_menu_draw_background(float *vbo_buffer)
+static void gfx_3ds_menu_draw_background()
 {
     Mtx_Identity(&modelView);
     Mtx_OrthoTilt(&projection, 0.0, 320.0, 0.0, 240.0, 0.0, 1.0, true);
@@ -30,22 +28,16 @@ static void gfx_3ds_menu_draw_background(float *vbo_buffer)
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_modelView, &modelView);
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &projection);
 
-    memcpy(vbo_buffer + buffer_offset * VERTEX_SHADER_SIZE,
-           vertex_list_color,
-           sizeof(vertex_list_color));
-
     C3D_TexEnv* env = C3D_GetTexEnv(0);
     C3D_TexEnvInit(env);
     C3D_TexEnvColor(env, 0x66000000);
     C3D_TexEnvSrc(env, C3D_Both, GPU_CONSTANT, 0, 0);
     C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 
-    C3D_DrawArrays(GPU_TRIANGLES, buffer_offset, 6); // 2 triangles
-
-    buffer_offset += 6;
+    gfx_3ds_immediate_render(vertex_list_color, 2);
 }
 
-static void gfx_3ds_menu_draw_button(float *vbo_buffer, int x, int y, C3D_Tex texture)
+static void gfx_3ds_menu_draw_button(int x, int y, C3D_Tex texture)
 {
     Mtx_Identity(&modelView);
     Mtx_Translate(&modelView, x, 240 - y, 0.0f, false);
@@ -54,10 +46,6 @@ static void gfx_3ds_menu_draw_button(float *vbo_buffer, int x, int y, C3D_Tex te
 
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_modelView, &modelView);
     C3D_FVUnifMtx4x4(GPU_VERTEX_SHADER, uLoc_projection, &projection);
-
-    memcpy(vbo_buffer + buffer_offset * VERTEX_SHADER_SIZE,
-           vertex_list_button,
-           sizeof(vertex_list_button));
 
     C3D_TexBind(0, &texture);
     C3D_TexFlush(&texture);
@@ -68,20 +56,19 @@ static void gfx_3ds_menu_draw_button(float *vbo_buffer, int x, int y, C3D_Tex te
     C3D_TexEnvSrc(env, C3D_Both, GPU_TEXTURE0, 0, 0);
     C3D_TexEnvFunc(env, C3D_Both, GPU_REPLACE);
 
-    C3D_DrawArrays(GPU_TRIANGLES, buffer_offset, 6); // 2 triangles
-    buffer_offset += 6;
+    gfx_3ds_immediate_render(vertex_list_button, 2);
 }
 
-static void gfx_3ds_menu_draw_buttons(float * vertex_buffer)
+static void gfx_3ds_menu_draw_buttons()
 {
     // aa
-    gfx_3ds_menu_draw_button(vertex_buffer, 48, 96, gfx_config.useAA ? aa_on_tex : aa_off_tex);
+    gfx_3ds_menu_draw_button(48, 96, gfx_config.useAA ? aa_on_tex : aa_off_tex);
     // screen mode
-    gfx_3ds_menu_draw_button(vertex_buffer, 208, 96, gfx_config.useWide ? mode_800_tex : mode_400_tex);
+    gfx_3ds_menu_draw_button(208, 96, gfx_config.useWide ? mode_800_tex : mode_400_tex);
     // resume
-    gfx_3ds_menu_draw_button(vertex_buffer, 48, 208, resume_tex);
+    gfx_3ds_menu_draw_button(48, 208, resume_tex);
     // exit game
-    gfx_3ds_menu_draw_button(vertex_buffer, 208, 208, exit_tex);
+    gfx_3ds_menu_draw_button(208, 208, exit_tex);
 }
 
 static bool is_inside_box(int pos_x, int pos_y, int x, int y, int width, int height)
@@ -150,16 +137,26 @@ void gfx_3ds_menu_init()
     C3D_TexSetFilter(&exit_tex, GPU_LINEAR, GPU_NEAREST);
 }
 
-uint32_t gfx_3ds_menu_draw(float *vertex_buffer, int vertex_offset, bool enabled)
+void gfx_3ds_menu_draw()
 {
-    buffer_offset = vertex_offset;
-    gfx_3ds_menu_draw_background(vertex_buffer);
-    if (enabled)
-        gfx_3ds_menu_draw_buttons(vertex_buffer);
+    gfx_3ds_menu_draw_background();
+    gfx_3ds_menu_draw_buttons();
     if (debounce)
         debounce--;
+}
 
-    return buffer_offset - vertex_offset;
+void gfx_3ds_immediate_render(const vertex vertex_list[], int num_tris)
+{
+    C3D_ImmDrawBegin(GPU_TRIANGLES);
+
+    for (int i = 0; i < num_tris * 3; i++)
+    {
+        C3D_ImmSendAttrib(vertex_list[i].xyzw[0], vertex_list[i].xyzw[1], vertex_list[i].xyzw[2], vertex_list[i].xyzw[3]);
+        C3D_ImmSendAttrib(vertex_list[i].texcoord[0], vertex_list[i].texcoord[1], 0.0f, 0.0f);
+        C3D_ImmSendAttrib(vertex_list[i].rgba[0], vertex_list[i].rgba[1], vertex_list[i].rgba[2], vertex_list[i].rgba[3]);
+    }
+
+    C3D_ImmDrawEnd();
 }
 
 #endif

@@ -27,8 +27,9 @@ typedef enum {
     EXIT_MENU
 } menu_action;
 
+void gfx_3ds_immediate_render(const vertex vertex_list[], int num_tris);
 void gfx_3ds_menu_init();
-uint32_t gfx_3ds_menu_draw(float *vertex_buffer, int vertex_offset, bool enabled);
+void gfx_3ds_menu_draw();
 menu_action gfx_3ds_menu_on_touch(int x, int y);
 
 
